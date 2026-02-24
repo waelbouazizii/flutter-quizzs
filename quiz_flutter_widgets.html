@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Fondamentaux des Widgets Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --flutter-blue: #0553B1;
+    --flutter-sky:  #54C5F8;
+    --dart-blue:    #00D2FF;
+    --bg:           #050D1A;
+    --surface:      #0C1829;
+    --surface2:     #112240;
+    --border:       rgba(84, 197, 248, 0.15);
+    --text:         #E8F4FD;
+    --muted:        #6B8FAF;
+    --green:        #00E5A0;
+    --green-bg:     rgba(0, 229, 160, 0.08);
+    --red:          #FF5C7A;
+    --red-bg:       rgba(255, 92, 122, 0.08);
+    --yellow:       #FFD166;
+    --radius:       12px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND GRID ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(84,197,248,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(84,197,248,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── GLOW ORBS ── */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { width: 500px; height: 500px; background: rgba(5,83,177,0.25); top: -150px; right: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: rgba(0,210,255,0.12); bottom: 100px; left: -100px; }
+
+  /* ── WRAPPER ── */
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    text-align: center;
+    margin-bottom: 56px;
+    animation: fadeDown 0.7s ease both;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(84,197,248,0.1);
+    border: 1px solid rgba(84,197,248,0.25);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.12em;
+    color: var(--flutter-sky);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--flutter-sky);
+    animation: pulse 2s infinite;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #fff 30%, var(--flutter-sky));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap {
+    margin-bottom: 48px;
+    animation: fadeDown 0.7s 0.1s ease both;
+  }
+  .progress-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+  }
+  .progress-meta span:last-child { color: var(--flutter-sky); }
+  .progress-track {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--flutter-blue), var(--flutter-sky));
+    border-radius: 999px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+  }
+
+  /* ── QUESTION CARD ── */
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.5s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--flutter-blue), var(--flutter-sky), transparent);
+  }
+
+  .q-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--flutter-sky);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .q-number::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .q-text {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.55;
+    color: var(--text);
+    margin-bottom: 28px;
+  }
+
+  /* ── OPTIONS ── */
+  .options { display: flex; flex-direction: column; gap: 10px; }
+
+  .option {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 20px;
+    background: var(--surface2);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+    font-family: 'Sora', sans-serif;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    position: relative;
+    overflow: hidden;
+  }
+  .option:hover:not(:disabled) {
+    border-color: rgba(84,197,248,0.3);
+    background: rgba(84,197,248,0.05);
+    transform: translateX(4px);
+  }
+  .option:disabled { cursor: default; }
+
+  .option-letter {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: rgba(84,197,248,0.1);
+    border: 1px solid rgba(84,197,248,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--flutter-sky);
+    transition: all 0.2s ease;
+    margin-top: 1px;
+  }
+
+  .option.correct {
+    border-color: var(--green);
+    background: var(--green-bg);
+  }
+  .option.correct .option-letter {
+    background: var(--green);
+    border-color: var(--green);
+    color: #000;
+  }
+
+  .option.wrong {
+    border-color: var(--red);
+    background: var(--red-bg);
+    opacity: 0.7;
+  }
+  .option.wrong .option-letter {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+  }
+
+  .option.dimmed { opacity: 0.35; }
+
+  /* ── EXPLANATION ── */
+  .explanation {
+    display: none;
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: rgba(255,209,102,0.07);
+    border: 1px solid rgba(255,209,102,0.2);
+    border-radius: var(--radius);
+    font-size: 13px;
+    line-height: 1.65;
+    color: #ccc;
+    animation: fadeUp 0.3s ease both;
+  }
+  .explanation.show { display: block; }
+  .explanation strong {
+    color: var(--yellow);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── NEXT BUTTON ── */
+  .next-btn {
+    display: none;
+    margin-top: 20px;
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--flutter-blue), #0870E0);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .next-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.1));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .next-btn:hover::before { opacity: 1; }
+  .next-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(5,83,177,0.4); }
+  .next-btn:active { transform: translateY(0); }
+  .next-btn.show { display: block; animation: fadeUp 0.3s ease both; }
+
+  /* ── RESULTS SCREEN ── */
+  #results {
+    display: none;
+    text-align: center;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .score-ring {
+    width: 160px; height: 160px;
+    margin: 0 auto 32px;
+    position: relative;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring circle {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+  }
+  .ring-bg   { stroke: var(--surface2); }
+  .ring-fill { stroke: url(#scoreGrad); transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+  .score-label {
+    position: absolute;
+    inset: 0; display: flex;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .score-number {
+    font-size: 42px; font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, #fff, var(--flutter-sky));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .score-denom { font-size: 14px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+  .result-title {
+    font-size: 26px; font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+  }
+  .result-msg { color: var(--muted); font-size: 15px; line-height: 1.6; margin-bottom: 36px; }
+
+  .restart-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 32px;
+    background: transparent;
+    border: 1px solid rgba(84,197,248,0.3);
+    border-radius: var(--radius);
+    color: var(--flutter-sky);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.03em;
+  }
+  .restart-btn:hover {
+    background: rgba(84,197,248,0.08);
+    border-color: var(--flutter-sky);
+    transform: translateY(-2px);
+  }
+
+  /* ── SUMMARY TILES ── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin: 32px 0;
+  }
+  .summary-tile {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    transition: transform 0.2s;
+  }
+  .summary-tile:hover { transform: scale(1.1); }
+  .summary-tile.ok   { background: var(--green-bg); border: 1px solid var(--green); color: var(--green); }
+  .summary-tile.ko   { background: var(--red-bg);   border: 1px solid var(--red);   color: var(--red); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-6px); }
+    40%       { transform: translateX(6px); }
+    60%       { transform: translateX(-4px); }
+    80%       { transform: translateX(4px); }
+  }
+  .shake { animation: shake 0.35s ease; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 520px) {
+    .question-card { padding: 24px 20px; }
+    .q-text { font-size: 15px; }
+    .option { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="badge"><span class="badge-dot"></span>IAM1 · Flutter</div>
+    <h1>Fondamentaux des<br>Widgets Flutter</h1>
+    <p class="subtitle">Quiz d'auto-évaluation · 5 questions · Répondez et découvrez les explications</p>
+  </header>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap">
+    <div class="progress-meta">
+      <span>PROGRESSION</span>
+      <span id="progress-label">0 / 5</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- QUIZ CONTAINER -->
+  <div id="quiz-container"></div>
+
+  <!-- RESULTS (hidden initially) -->
+  <div id="results">
+    <div class="score-ring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs>
+          <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#0553B1"/>
+            <stop offset="100%" stop-color="#54C5F8"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg"   cx="80" cy="80" r="68" />
+        <circle class="ring-fill" cx="80" cy="80" r="68"
+          stroke-dasharray="427.26"
+          stroke-dashoffset="427.26"
+          id="ring-fill" />
+      </svg>
+      <div class="score-label">
+        <span class="score-number" id="score-num">0</span>
+        <span class="score-denom" id="score-denom">/ 5</span>
+      </div>
+    </div>
+
+    <h2 class="result-title" id="result-title"></h2>
+    <p class="result-msg" id="result-msg"></p>
+
+    <div class="summary-grid" id="summary-grid"></div>
+
+    <button class="restart-btn" onclick="restart()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/>
+      </svg>
+      Recommencer le quiz
+    </button>
+  </div>
+
+</div>
+
+<script>
+const questions = [
+  {
+    q: "Que doit obligatoirement retourner la méthode build() d'un widget Flutter ?",
+    options: [
+      "Une chaîne String décrivant le widget.",
+      "Un widget (Widget).",
+      "Un booléen indiquant si le rendu a réussi.",
+      "null si rien ne doit être affiché."
+    ],
+    correct: 1,
+    explanation: "build() retourne toujours un Widget. C'est le cœur du mécanisme déclaratif de Flutter : chaque widget décrit ce qu'il affiche via d'autres widgets retournés par cette méthode."
+  },
+  {
+    q: "Quel objet permet d'ajouter des bordures, couleurs de fond et ombres à un Container ?",
+    options: [
+      "ThemeData — pour le style global de l'application.",
+      "TextStyle — pour le style du texte uniquement.",
+      "BoxDecoration — pour les décorations visuelles d'un Container.",
+      "EdgeInsets — pour définir les marges et paddings."
+    ],
+    correct: 2,
+    explanation: "BoxDecoration est l'objet de décoration dédié aux Container. Il gère : color, border, borderRadius, gradient, image de fond et boxShadow. C'est l'équivalent Flutter du CSS box-model styling."
+  },
+  {
+    q: "Pourquoi déclare-t-on les propriétés d'un StatelessWidget avec le mot-clé final ?",
+    options: [
+      "Pour améliorer la vitesse de compilation du code Dart.",
+      "Parce que les StatelessWidgets sont immuables : leurs propriétés ne peuvent pas changer après initialisation.",
+      "Pour permettre à Flutter de les modifier lors du Hot Reload.",
+      "C'est une convention de style, ce n'est pas obligatoire."
+    ],
+    correct: 1,
+    explanation: "Les StatelessWidgets sont conçus pour être immuables. Le mot-clé final garantit que les propriétés sont définies une seule fois dans le constructeur et ne peuvent plus être réassignées, ce qui est cohérent avec le modèle de rendu de Flutter."
+  },
+  {
+    q: "Quel est le rôle du paramètre {super.key} dans le constructeur d'un widget ?",
+    options: [
+      "Il définit la clé primaire de la base de données locale.",
+      "Il transmet une clé unique au widget parent (StatelessWidget) pour que Flutter puisse identifier le widget dans l'arbre.",
+      "Il est utilisé pour le hot reload uniquement.",
+      "Il active le mode de débogage du widget."
+    ],
+    correct: 1,
+    explanation: "La key est transmise à la classe parente (StatelessWidget). Flutter l'utilise pour rapprocher les éléments du widget tree lors des reconstructions (reconciliation), optimisant ainsi les performances en évitant des reconstructions inutiles."
+  },
+  {
+    q: "Quelle syntaxe Dart permet d'associer une valeur de couleur à chaque valeur de l'enum HitType ?",
+    options: [
+      "Un bloc if / else if / else en cascade.",
+      "Un switch statement classique avec des cas et des return.",
+      "Une switch expression (Dart 3+) qui retourne une valeur directement.",
+      "Une Map<HitType, Color> consultée dynamiquement."
+    ],
+    correct: 2,
+    explanation: "La switch expression de Dart 3+ (color: switch(hitType) { HitType.hit => Colors.green, ... }) retourne directement une valeur sans accolades ni return. Plus concise qu'un switch traditionnel, elle est idéale pour les correspondances valeur-à-valeur comme le mapping enum → couleur."
+  }
+];
+
+const LETTERS = ['A','B','C','D'];
+let current = 0;
+let score = 0;
+let answered = [];
+let results = [];
+
+function render() {
+  const container = document.getElementById('quiz-container');
+  if (current >= questions.length) {
+    showResults();
+    return;
+  }
+
+  const q = questions[current];
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'question-card';
+  card.innerHTML = `
+    <div class="q-number">Question ${current + 1} sur ${questions.length}</div>
+    <p class="q-text">${q.q}</p>
+    <div class="options" id="options"></div>
+    <div class="explanation" id="explanation">
+      <strong>💡 Explication</strong>
+      ${q.explanation}
+    </div>
+  `;
+  container.appendChild(card);
+
+  const optionsEl = card.querySelector('#options');
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerHTML = `<span class="option-letter">${LETTERS[i]}</span><span>${opt}</span>`;
+    btn.onclick = () => handleAnswer(i);
+    optionsEl.appendChild(btn);
+  });
+
+  // Next button
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'next-btn';
+  nextBtn.id = 'next-btn';
+  nextBtn.textContent = current === questions.length - 1 ? 'Voir les résultats →' : 'Question suivante →';
+  nextBtn.onclick = () => {
+    current++;
+    render();
+    updateProgress();
+  };
+  container.appendChild(nextBtn);
+
+  updateProgress();
+}
+
+function handleAnswer(chosen) {
+  const q = questions[current];
+  const options = document.querySelectorAll('.option');
+  const explanation = document.getElementById('explanation');
+  const nextBtn = document.getElementById('next-btn');
+
+  options.forEach(btn => btn.disabled = true);
+
+  const isCorrect = chosen === q.correct;
+  if (isCorrect) score++;
+  results[current] = isCorrect;
+
+  options.forEach((btn, i) => {
+    if (i === q.correct) {
+      btn.classList.add('correct');
+    } else if (i === chosen && !isCorrect) {
+      btn.classList.add('wrong');
+      btn.classList.add('shake');
+    } else {
+      btn.classList.add('dimmed');
+    }
+  });
+
+  explanation.classList.add('show');
+  nextBtn.classList.add('show');
+}
+
+function updateProgress() {
+  const pct = (current / questions.length) * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${current} / ${questions.length}`;
+}
+
+function showResults() {
+  document.getElementById('quiz-container').innerHTML = '';
+  const resultsEl = document.getElementById('results');
+  resultsEl.style.display = 'block';
+
+  // Score number
+  document.getElementById('score-num').textContent = score;
+
+  // Ring animation
+  const circumference = 427.26;
+  const offset = circumference - (score / questions.length) * circumference;
+  setTimeout(() => {
+    document.getElementById('ring-fill').style.strokeDashoffset = offset;
+  }, 100);
+
+  // Title & message
+  const pct = score / questions.length;
+  let title, msg;
+  if (pct === 1) {
+    title = "Score parfait ! 🎉";
+    msg = "Excellente maîtrise des fondamentaux Flutter. Vous êtes prêt pour la suite du cours sur le layout et la gestion d'état.";
+  } else if (pct >= 0.8) {
+    title = "Très bien ! 🚀";
+    msg = "Vous maîtrisez l'essentiel des widgets Flutter. Relisez les questions manquées pour consolider vos connaissances.";
+  } else if (pct >= 0.6) {
+    title = "Pas mal ! 📚";
+    msg = "Bonne base, mais quelques notions méritent d'être approfondies. Revoyez la partie théorique sur StatelessWidget et BoxDecoration.";
+  } else {
+    title = "À retravailler 💪";
+    msg = "Les fondamentaux Flutter nécessitent encore de la pratique. Relisez le cours et retentez le quiz après révision.";
+  }
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-msg').textContent = msg;
+
+  // Summary grid
+  const grid = document.getElementById('summary-grid');
+  grid.innerHTML = '';
+  results.forEach((ok, i) => {
+    const tile = document.createElement('div');
+    tile.className = `summary-tile ${ok ? 'ok' : 'ko'}`;
+    tile.title = `Question ${i+1} : ${ok ? 'Correct' : 'Incorrect'}`;
+    tile.textContent = `Q${i+1}`;
+    grid.appendChild(tile);
+  });
+
+  // Final progress
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-label').textContent = `${questions.length} / ${questions.length}`;
+}
+
+function restart() {
+  current = 0;
+  score = 0;
+  results = [];
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('ring-fill').style.strokeDashoffset = '427.26';
+  render();
+  updateProgress();
+}
+
+// Init
+render();
+</script>
+</body>
+</html>
