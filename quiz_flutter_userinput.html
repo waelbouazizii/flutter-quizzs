@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Gestion des Entrées Utilisateur Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --flutter-blue: #0553B1;
+    --flutter-sky:  #54C5F8;
+    --bg:           #050D1A;
+    --surface:      #0C1829;
+    --surface2:     #112240;
+    --border:       rgba(84,197,248,0.15);
+    --text:         #E8F4FD;
+    --muted:        #6B8FAF;
+    --green:        #00E5A0;
+    --green-bg:     rgba(0,229,160,0.08);
+    --red:          #FF5C7A;
+    --red-bg:       rgba(255,92,122,0.08);
+    --yellow:       #FFD166;
+    --radius:       12px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(84,197,248,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(84,197,248,0.03) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  }
+  .orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+  .orb-1 { width: 500px; height: 500px; background: rgba(5,83,177,0.25); top: -150px; right: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: rgba(0,210,255,0.12); bottom: 100px; left: -100px; }
+
+  .wrapper { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header { text-align: center; margin-bottom: 56px; animation: fadeDown 0.7s ease both; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(84,197,248,0.1); border: 1px solid rgba(84,197,248,0.25);
+    border-radius: 999px; padding: 6px 16px; font-size: 11px;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em;
+    color: var(--flutter-sky); text-transform: uppercase; margin-bottom: 24px;
+  }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--flutter-sky); animation: pulse 2s infinite; }
+  h1 {
+    font-size: clamp(28px, 5vw, 42px); font-weight: 800; line-height: 1.15; letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #fff 30%, var(--flutter-sky));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px;
+  }
+  .subtitle { color: var(--muted); font-size: 15px; font-weight: 300; line-height: 1.6; }
+
+  .progress-wrap { margin-bottom: 48px; animation: fadeDown 0.7s 0.1s ease both; }
+  .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+  .progress-meta span:last-child { color: var(--flutter-sky); }
+  .progress-track { height: 3px; background: var(--surface2); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--flutter-blue), var(--flutter-sky)); border-radius: 999px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+
+  .question-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 36px; margin-bottom: 16px; animation: fadeUp 0.5s ease both; position: relative; overflow: hidden;
+  }
+  .question-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--flutter-blue), var(--flutter-sky), transparent); }
+
+  .q-number { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--flutter-sky); text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .q-number::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .q-text { font-size: 17px; font-weight: 600; line-height: 1.55; color: var(--text); margin-bottom: 28px; }
+
+  .q-code {
+    background: #1E1E1E; border: 1px solid rgba(84,197,248,0.1);
+    border-radius: 8px; padding: 14px 18px; margin: -8px 0 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #D4D4D4; line-height: 1.7; overflow-x: auto;
+  }
+  .kw { color: #569CD6; } .fn { color: #DCDCAA; } .cm { color: #6A9955; } .str { color: #CE9178; } .ty { color: #4EC9B0; }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    display: flex; align-items: flex-start; gap: 14px; padding: 16px 20px;
+    background: var(--surface2); border: 1px solid transparent; border-radius: var(--radius);
+    cursor: pointer; transition: all 0.2s ease; text-align: left; width: 100%;
+    font-family: 'Sora', sans-serif; color: var(--text); font-size: 14px; line-height: 1.5;
+  }
+  .option:hover:not(:disabled) { border-color: rgba(84,197,248,0.3); background: rgba(84,197,248,0.05); transform: translateX(4px); }
+  .option:disabled { cursor: default; }
+  .option-letter {
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px;
+    background: rgba(84,197,248,0.1); border: 1px solid rgba(84,197,248,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+    color: var(--flutter-sky); transition: all 0.2s ease; margin-top: 1px;
+  }
+  .option.correct { border-color: var(--green); background: var(--green-bg); }
+  .option.correct .option-letter { background: var(--green); border-color: var(--green); color: #000; }
+  .option.wrong { border-color: var(--red); background: var(--red-bg); opacity: 0.7; }
+  .option.wrong .option-letter { background: var(--red); border-color: var(--red); color: #fff; }
+  .option.dimmed { opacity: 0.35; }
+
+  .explanation { display: none; margin-top: 20px; padding: 16px 20px; background: rgba(255,209,102,0.07); border: 1px solid rgba(255,209,102,0.2); border-radius: var(--radius); font-size: 13px; line-height: 1.65; color: #ccc; animation: fadeUp 0.3s ease both; }
+  .explanation.show { display: block; }
+  .explanation strong { color: var(--yellow); font-weight: 600; display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+
+  .next-btn { display: none; margin-top: 20px; width: 100%; padding: 16px; background: linear-gradient(135deg, var(--flutter-blue), #0870E0); border: none; border-radius: var(--radius); color: #fff; font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; letter-spacing: 0.02em; transition: all 0.2s ease; position: relative; overflow: hidden; }
+  .next-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.1)); opacity: 0; transition: opacity 0.2s; }
+  .next-btn:hover::before { opacity: 1; }
+  .next-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(5,83,177,0.4); }
+  .next-btn.show { display: block; animation: fadeUp 0.3s ease both; }
+
+  #results { display: none; text-align: center; animation: fadeUp 0.6s ease both; }
+  .score-ring { width: 160px; height: 160px; margin: 0 auto 32px; position: relative; }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring circle { fill: none; stroke-width: 8; stroke-linecap: round; }
+  .ring-bg { stroke: var(--surface2); }
+  .ring-fill { stroke: url(#scoreGrad); transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+  .score-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .score-number { font-size: 42px; font-weight: 800; line-height: 1; background: linear-gradient(135deg, #fff, var(--flutter-sky)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .score-denom { font-size: 14px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .result-title { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+  .result-msg { color: var(--muted); font-size: 15px; line-height: 1.6; margin-bottom: 36px; }
+  .restart-btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px; background: transparent; border: 1px solid rgba(84,197,248,0.3); border-radius: var(--radius); color: var(--flutter-sky); font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+  .restart-btn:hover { background: rgba(84,197,248,0.08); border-color: var(--flutter-sky); transform: translateY(-2px); }
+  .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 32px 0; }
+  .summary-tile { aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; transition: transform 0.2s; }
+  .summary-tile:hover { transform: scale(1.1); }
+  .summary-tile.ok { background: var(--green-bg); border: 1px solid var(--green); color: var(--green); }
+  .summary-tile.ko { background: var(--red-bg); border: 1px solid var(--red); color: var(--red); }
+
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+  .shake { animation: shake 0.35s ease; }
+  @media (max-width: 520px) { .question-card { padding: 24px 20px; } .q-text { font-size: 15px; } .option { font-size: 13px; } }
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="wrapper">
+  <header>
+    <div class="badge"><span class="badge-dot"></span>IAM1· Flutter</div>
+    <h1>Gestion des Entrées<br>Utilisateur</h1>
+    <p class="subtitle">Quiz d'auto-évaluation · 5 questions · TextField · TextEditingController · FocusNode</p>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-meta"><span>PROGRESSION</span><span id="progress-label">0 / 5</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+
+  <div id="quiz-container"></div>
+
+  <div id="results">
+    <div class="score-ring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs>
+          <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#0553B1"/>
+            <stop offset="100%" stop-color="#54C5F8"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="80" cy="80" r="68"/>
+        <circle class="ring-fill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="ring-fill"/>
+      </svg>
+      <div class="score-label">
+        <span class="score-number" id="score-num">0</span>
+        <span class="score-denom">/ 5</span>
+      </div>
+    </div>
+    <h2 class="result-title" id="result-title"></h2>
+    <p class="result-msg" id="result-msg"></p>
+    <div class="summary-grid" id="summary-grid"></div>
+    <button class="restart-btn" onclick="restart()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+      Recommencer le quiz
+    </button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    q: "Comment lire ou vider programmatiquement le contenu d'un TextField ?",
+    code: [
+      "<span class='cm'>// Comment accéder au texte saisi ici ?</span>",
+      "<span class='kw'>final</span> myField = <span class='fn'>TextField</span>(",
+      "  <span class='cm'>// quelle propriété pour lire/vider le texte ?</span>",
+      ");"
+    ],
+    options: [
+      "Accéder directement à la propriété text du widget TextField.",
+      "Utiliser un TextEditingController associé au TextField via sa propriété controller.",
+      "Écouter le callback onChanged et stocker la valeur dans une variable locale.",
+      "Appeler la méthode statique TextField.getText()."
+    ],
+    correct: 1,
+    explanation: "TextField ne possède pas de propriété text accessible directement. TextEditingController est le pont obligatoire : .text lit le contenu actuel, .clear() le vide, et il peut aussi modifier la sélection ou le curseur programmatiquement."
+  },
+  {
+    q: "Comment déplacer programmatiquement le focus vers un TextField spécifique ?",
+    options: [
+      "Appeler directement la méthode TextField.focus().",
+      "Passer autofocus: true au TextField au moment souhaité.",
+      "Utiliser un FocusNode et appeler requestFocus() sur celui-ci.",
+      "Entourer le TextField d'un GestureDetector et simuler un tap programmatique."
+    ],
+    correct: 2,
+    explanation: "FocusNode est l'objet dédié à la gestion dynamique du focus. Une fois associé via focusNode: _node, l'appel _node.requestFocus() donne le focus au champ et ouvre le clavier sur mobile. autofocus ne fonctionne qu'une seule fois au build initial."
+  },
+  {
+    q: "Pourquoi utiliser un callback void Function(String) dans GuessInput plutôt que d'appeler directement _game.guess() ?",
+    code: [
+      "<span class='cm'>// Dans GuessInput :</span>",
+      "<span class='kw'>final</span> <span class='ty'>void Function(String)</span> onSubmitGuess;",
+      "",
+      "<span class='cm'>// vs directement :</span>",
+      "<span class='cm'>// _game.guess(texte); ← pourquoi éviter ?</span>"
+    ],
+    options: [
+      "Pour respecter une convention de nommage obligatoire en Flutter.",
+      "Pour rendre GuessInput réutilisable et découplé de la logique métier — le parent décide quoi faire avec la saisie.",
+      "Parce qu'un StatelessWidget ne peut pas accéder à des objets externes.",
+      "Pour améliorer les performances de rendu du widget."
+    ],
+    correct: 1,
+    explanation: "Le pattern callback rend le widget réutilisable et testable indépendamment. GuessInput ne connaît pas _game — il signale qu'une saisie a eu lieu. Le parent (GamePage) peut brancher n'importe quelle logique : appeler _game.guess(), valider, journaliser, ou simuler dans un test."
+  },
+  {
+    q: "Quel est le rôle de .trim() lors de la soumission de la saisie utilisateur ?",
+    options: [
+      "Convertir le texte en majuscules avant de l'envoyer au jeu.",
+      "Limiter le texte à 5 caractères si l'utilisateur en a saisi plus.",
+      "Retirer les espaces en début et fin de chaîne pour éviter qu'un espace compte comme un caractère valide.",
+      "Vérifier que le mot appartient à la liste des mots légaux du jeu."
+    ],
+    correct: 2,
+    explanation: ".trim() supprime les espaces et caractères blancs en début et fin de chaîne. Sans lui, 'aback ' (avec un espace final) passerait maxLength: 5 mais échouerait à isLegalGuess() car 'aback ' n'est pas reconnu comme un mot valide dans la liste du jeu."
+  },
+  {
+    q: "Pourquoi factoriser la logique dans une méthode _onSubmit() plutôt que de la dupliquer dans onSubmitted et onPressed ?",
+    code: [
+      "<span class='cm'>// Méthode factorisée :</span>",
+      "<span class='kw'>void</span> <span class='fn'>_onSubmit</span>() { ... }",
+      "",
+      "<span class='cm'>// Utilisée par les deux callbacks :</span>",
+      "<span class='fn'>TextField</span>(onSubmitted: (_) => <span class='fn'>_onSubmit</span>())",
+      "<span class='fn'>IconButton</span>(onPressed: _onSubmit)"
+    ],
+    options: [
+      "Flutter exige une méthode nommée _onSubmit() pour les soumissions de formulaires.",
+      "Pour respecter le principe DRY (Don't Repeat Yourself) : une seule source de vérité, facile à maintenir et à faire évoluer.",
+      "Pour améliorer les performances car une méthode est plus rapide que deux lambdas.",
+      "Parce que IconButton.onPressed n'accepte pas les fonctions lambda en Flutter."
+    ],
+    correct: 1,
+    explanation: "DRY (Don't Repeat Yourself) recommande une seule source de vérité pour chaque comportement. Si la logique de soumission évolue (validation, analytics, animation...), on ne modifie qu'un seul endroit : _onSubmit(), sans risque d'incohérence entre le bouton et la touche Entrée."
+  }
+];
+
+const LETTERS = ['A','B','C','D'];
+let current = 0, score = 0, results = [];
+
+function render() {
+  const container = document.getElementById('quiz-container');
+  if (current >= questions.length) { showResults(); return; }
+
+  const q = questions[current];
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'question-card';
+  const codeHtml = q.code ? `<div class="q-code">${q.code.join('<br>')}</div>` : '';
+  card.innerHTML = `
+    <div class="q-number">Question ${current + 1} sur ${questions.length}</div>
+    <p class="q-text">${q.q}</p>
+    ${codeHtml}
+    <div class="options" id="options"></div>
+    <div class="explanation" id="explanation"><strong>💡 Explication</strong>${q.explanation}</div>
+  `;
+  container.appendChild(card);
+
+  const optionsEl = card.querySelector('#options');
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerHTML = `<span class="option-letter">${LETTERS[i]}</span><span>${opt}</span>`;
+    btn.onclick = () => handleAnswer(i);
+    optionsEl.appendChild(btn);
+  });
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'next-btn';
+  nextBtn.id = 'next-btn';
+  nextBtn.textContent = current === questions.length - 1 ? 'Voir les résultats →' : 'Question suivante →';
+  nextBtn.onclick = () => { current++; render(); updateProgress(); };
+  container.appendChild(nextBtn);
+  updateProgress();
+}
+
+function handleAnswer(chosen) {
+  const q = questions[current];
+  const options = document.querySelectorAll('.option');
+  options.forEach(b => b.disabled = true);
+  const isCorrect = chosen === q.correct;
+  if (isCorrect) score++;
+  results[current] = isCorrect;
+  options.forEach((btn, i) => {
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === chosen && !isCorrect) { btn.classList.add('wrong'); btn.classList.add('shake'); }
+    else btn.classList.add('dimmed');
+  });
+  document.getElementById('explanation').classList.add('show');
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function updateProgress() {
+  document.getElementById('progress-fill').style.width = (current / questions.length * 100) + '%';
+  document.getElementById('progress-label').textContent = `${current} / ${questions.length}`;
+}
+
+function showResults() {
+  document.getElementById('quiz-container').innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('score-num').textContent = score;
+  setTimeout(() => {
+    document.getElementById('ring-fill').style.strokeDashoffset =
+      427.26 - (score / questions.length) * 427.26;
+  }, 100);
+  const pct = score / questions.length;
+  const [title, msg] = pct === 1
+    ? ["Score parfait ! 🎉", "Maîtrise complète des entrées utilisateur Flutter. Vous êtes prêt pour les StatefulWidgets et setState() !"]
+    : pct >= 0.8
+    ? ["Très bien ! 🚀", "Excellente compréhension de TextField, TextEditingController et FocusNode. Revoyez les questions manquées."]
+    : pct >= 0.6
+    ? ["Pas mal ! 📚", "Bonne progression. Les concepts de callback et de FocusNode méritent un peu plus de pratique."]
+    : ["À retravailler 💪", "La gestion des entrées est fondamentale. Relisez le cours, pratiquez GuessInput, et retentez le quiz."];
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-msg').textContent = msg;
+  const grid = document.getElementById('summary-grid');
+  grid.innerHTML = '';
+  results.forEach((ok, i) => {
+    const tile = document.createElement('div');
+    tile.className = `summary-tile ${ok ? 'ok' : 'ko'}`;
+    tile.title = `Question ${i + 1} : ${ok ? 'Correct' : 'Incorrect'}`;
+    tile.textContent = `Q${i + 1}`;
+    grid.appendChild(tile);
+  });
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-label').textContent = `${questions.length} / ${questions.length}`;
+}
+
+function restart() {
+  current = 0; score = 0; results = [];
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('ring-fill').style.strokeDashoffset = '427.26';
+  render(); updateProgress();
+}
+
+render();
+</script>
+</body>
+</html>
