@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Mise en Page Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --flutter-blue: #0553B1;
+    --flutter-sky:  #54C5F8;
+    --dart-blue:    #00D2FF;
+    --bg:           #050D1A;
+    --surface:      #0C1829;
+    --surface2:     #112240;
+    --border:       rgba(84, 197, 248, 0.15);
+    --text:         #E8F4FD;
+    --muted:        #6B8FAF;
+    --green:        #00E5A0;
+    --green-bg:     rgba(0, 229, 160, 0.08);
+    --red:          #FF5C7A;
+    --red-bg:       rgba(255, 92, 122, 0.08);
+    --yellow:       #FFD166;
+    --radius:       12px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(84,197,248,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(84,197,248,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { width: 500px; height: 500px; background: rgba(5,83,177,0.25); top: -150px; right: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: rgba(0,210,255,0.12); bottom: 100px; left: -100px; }
+
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 56px;
+    animation: fadeDown 0.7s ease both;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(84,197,248,0.1);
+    border: 1px solid rgba(84,197,248,0.25);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.12em;
+    color: var(--flutter-sky);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--flutter-sky);
+    animation: pulse 2s infinite;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #fff 30%, var(--flutter-sky));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+
+  .progress-wrap {
+    margin-bottom: 48px;
+    animation: fadeDown 0.7s 0.1s ease both;
+  }
+  .progress-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+  }
+  .progress-meta span:last-child { color: var(--flutter-sky); }
+  .progress-track {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--flutter-blue), var(--flutter-sky));
+    border-radius: 999px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+  }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.5s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--flutter-blue), var(--flutter-sky), transparent);
+  }
+
+  .q-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--flutter-sky);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .q-number::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .q-text {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.55;
+    color: var(--text);
+    margin-bottom: 28px;
+  }
+
+  /* code snippet inside question */
+  .q-code {
+    background: #1E1E1E;
+    border: 1px solid rgba(84,197,248,0.1);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: -8px 0 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #D4D4D4;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .q-code .kw  { color: #569CD6; }
+  .q-code .fn  { color: #DCDCAA; }
+  .q-code .str { color: #CE9178; }
+  .q-code .cm  { color: #6A9955; }
+  .q-code .num { color: #B5CEA8; }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+
+  .option {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 20px;
+    background: var(--surface2);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+    font-family: 'Sora', sans-serif;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    position: relative;
+  }
+  .option:hover:not(:disabled) {
+    border-color: rgba(84,197,248,0.3);
+    background: rgba(84,197,248,0.05);
+    transform: translateX(4px);
+  }
+  .option:disabled { cursor: default; }
+
+  .option-letter {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: rgba(84,197,248,0.1);
+    border: 1px solid rgba(84,197,248,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    color: var(--flutter-sky);
+    transition: all 0.2s ease;
+    margin-top: 1px;
+  }
+
+  .option.correct { border-color: var(--green); background: var(--green-bg); }
+  .option.correct .option-letter { background: var(--green); border-color: var(--green); color: #000; }
+  .option.wrong   { border-color: var(--red); background: var(--red-bg); opacity: 0.7; }
+  .option.wrong .option-letter   { background: var(--red); border-color: var(--red); color: #fff; }
+  .option.dimmed  { opacity: 0.35; }
+
+  .explanation {
+    display: none;
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: rgba(255,209,102,0.07);
+    border: 1px solid rgba(255,209,102,0.2);
+    border-radius: var(--radius);
+    font-size: 13px;
+    line-height: 1.65;
+    color: #ccc;
+    animation: fadeUp 0.3s ease both;
+  }
+  .explanation.show { display: block; }
+  .explanation strong {
+    color: var(--yellow);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .next-btn {
+    display: none;
+    margin-top: 20px;
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--flutter-blue), #0870E0);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-family: 'Sora', sans-serif;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .next-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.1));
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .next-btn:hover::before { opacity: 1; }
+  .next-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(5,83,177,0.4); }
+  .next-btn:active { transform: translateY(0); }
+  .next-btn.show { display: block; animation: fadeUp 0.3s ease both; }
+
+  /* ── RESULTS ── */
+  #results {
+    display: none;
+    text-align: center;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .score-ring {
+    width: 160px; height: 160px;
+    margin: 0 auto 32px;
+    position: relative;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring circle { fill: none; stroke-width: 8; stroke-linecap: round; }
+  .ring-bg   { stroke: var(--surface2); }
+  .ring-fill { stroke: url(#scoreGrad); transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+  .score-label {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .score-number {
+    font-size: 42px; font-weight: 800; line-height: 1;
+    background: linear-gradient(135deg, #fff, var(--flutter-sky));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .score-denom { font-size: 14px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+  .result-title { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+  .result-msg   { color: var(--muted); font-size: 15px; line-height: 1.6; margin-bottom: 36px; }
+
+  .restart-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 32px;
+    background: transparent;
+    border: 1px solid rgba(84,197,248,0.3);
+    border-radius: var(--radius);
+    color: var(--flutter-sky);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.03em;
+  }
+  .restart-btn:hover {
+    background: rgba(84,197,248,0.08);
+    border-color: var(--flutter-sky);
+    transform: translateY(-2px);
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin: 32px 0;
+  }
+  .summary-tile {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    transition: transform 0.2s;
+  }
+  .summary-tile:hover { transform: scale(1.1); }
+  .summary-tile.ok { background: var(--green-bg); border: 1px solid var(--green); color: var(--green); }
+  .summary-tile.ko { background: var(--red-bg);   border: 1px solid var(--red);   color: var(--red); }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-6px); }
+    40%       { transform: translateX(6px); }
+    60%       { transform: translateX(-4px); }
+    80%       { transform: translateX(4px); }
+  }
+  .shake { animation: shake 0.35s ease; }
+
+  @media (max-width: 520px) {
+    .question-card { padding: 24px 20px; }
+    .q-text { font-size: 15px; }
+    .option { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="wrapper">
+
+  <header>
+    <div class="badge"><span class="badge-dot"></span>IAM1 · Flutter</div>
+    <h1>Mise en Page<br>avec Flutter</h1>
+    <p class="subtitle">Quiz d'auto-évaluation · 5 questions · Scaffold, Column, Row & Layout</p>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-meta">
+      <span>PROGRESSION</span>
+      <span id="progress-label">0 / 5</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <div id="quiz-container"></div>
+
+  <div id="results">
+    <div class="score-ring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs>
+          <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#0553B1"/>
+            <stop offset="100%" stop-color="#54C5F8"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg"   cx="80" cy="80" r="68"/>
+        <circle class="ring-fill" cx="80" cy="80" r="68"
+          stroke-dasharray="427.26"
+          stroke-dashoffset="427.26"
+          id="ring-fill"/>
+      </svg>
+      <div class="score-label">
+        <span class="score-number" id="score-num">0</span>
+        <span class="score-denom">/ 5</span>
+      </div>
+    </div>
+
+    <h2 class="result-title" id="result-title"></h2>
+    <p class="result-msg"    id="result-msg"></p>
+
+    <div class="summary-grid" id="summary-grid"></div>
+
+    <button class="restart-btn" onclick="restart()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/>
+      </svg>
+      Recommencer le quiz
+    </button>
+  </div>
+
+</div>
+
+<script>
+const questions = [
+  {
+    q: "Quelle est la différence fondamentale entre Column et Row ?",
+    options: [
+      "Column est réservé au défilement ; Row à l'affichage statique.",
+      "Column dispose ses enfants verticalement ; Row les dispose horizontalement.",
+      "Column peut contenir un nombre illimité d'enfants ; Row est limité à deux.",
+      "Column nécessite un parent Scaffold ; Row peut être utilisé seul."
+    ],
+    correct: 1,
+    explanation: "Column et Row partagent exactement la même interface. La seule différence est l'axe principal : Column est vertical (axe Y) et Row est horizontal (axe X). Les deux acceptent un nombre illimité d'enfants et peuvent être utilisés indépendamment de Scaffold."
+  },
+  {
+    q: "Que fournit le widget Scaffold dans une application Flutter ?",
+    options: [
+      "Uniquement une couleur de fond pour la page.",
+      "Une structure Material Design avec des emplacements pour AppBar, body, drawer, FAB et plus.",
+      "Un système de navigation entre les différentes pages de l'application.",
+      "Une gestion automatique de l'état de la page."
+    ],
+    correct: 1,
+    explanation: "Scaffold implémente la structure visuelle de base de Material Design. Il expose des slots nommés — appBar, body, floatingActionButton, drawer, bottomNavigationBar — permettant d'assembler rapidement un écran complet sans gérer manuellement le positionnement de chaque élément."
+  },
+  {
+    q: "Que fait la syntaxe collection for dans une liste Dart ?",
+    code: [
+      "<span class='cm'>// Exemple :</span>",
+      "<span class='kw'>children</span>: [",
+      "  <span class='kw'>for</span> (<span class='kw'>var</span> item <span class='kw'>in</span> maListe)",
+      "    <span class='fn'>Text</span>(item),",
+      "]"
+    ],
+    options: [
+      "Elle filtre les éléments d'une liste selon une condition booléenne.",
+      "Elle permet d'ajouter des éléments à une liste de façon itérative et déclarative, directement dans le littéral de liste.",
+      "Elle trie la liste dans l'ordre croissant avant de la retourner.",
+      "Elle convertit une liste en Set pour éliminer les doublons."
+    ],
+    correct: 1,
+    explanation: "La syntaxe collection for (for element) construit une liste de façon déclarative en itérant sur une collection. C'est l'équivalent de .map().toList() mais plus lisible et directement intégrable dans les widgets Flutter, sans nécessiter de méthode terminale."
+  },
+  {
+    q: "Comment la propriété spacing de Column diffère-t-elle de l'insertion manuelle de SizedBox ?",
+    options: [
+      "spacing applique un espace uniquement avant le premier enfant.",
+      "spacing et SizedBox sont strictement équivalents en termes de résultat et de performance.",
+      "spacing ajoute automatiquement un espace uniforme entre tous les enfants, sans insérer de SizedBox manuellement entre chaque élément.",
+      "spacing est une propriété CSS importée ; SizedBox est un widget Flutter natif."
+    ],
+    correct: 2,
+    explanation: "La propriété spacing (Flutter 3.27+) ajoute automatiquement un espace identique entre chaque enfant du Column ou Row. Sans spacing, il faudrait insérer SizedBox(height: x) entre chaque paire d'enfants manuellement, ce qui est verbeux et sujet aux oublis."
+  },
+  {
+    q: "Quel widget permet d'ajouter un espace interne (inset) autour de son enfant ?",
+    options: [
+      "Margin — widget dédié aux espaces externes.",
+      "Padding — widget qui ajoute un espace interne autour de son enfant via EdgeInsets.",
+      "Spacer — widget qui occupe l'espace disponible dans un Column ou Row.",
+      "Container avec margin — la seule façon de gérer les espaces internes en Flutter."
+    ],
+    correct: 1,
+    explanation: "Padding est le widget dédié aux espaces internes. Il accepte un paramètre padding de type EdgeInsets (all, symmetric, only, fromLTRB). Spacer occupe l'espace flexible restant dans un Column/Row. Container expose une propriété margin pour les espaces externes, mais Padding reste le widget idiomatique pour les espaces internes."
+  }
+];
+
+const LETTERS = ['A','B','C','D'];
+let current = 0, score = 0, results = [];
+
+function render() {
+  const container = document.getElementById('quiz-container');
+  if (current >= questions.length) { showResults(); return; }
+
+  const q = questions[current];
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'question-card';
+
+  const codeSnippet = q.code
+    ? `<div class="q-code">${q.code.join('<br>')}</div>`
+    : '';
+
+  card.innerHTML = `
+    <div class="q-number">Question ${current + 1} sur ${questions.length}</div>
+    <p class="q-text">${q.q}</p>
+    ${codeSnippet}
+    <div class="options" id="options"></div>
+    <div class="explanation" id="explanation">
+      <strong>💡 Explication</strong>
+      ${q.explanation}
+    </div>
+  `;
+  container.appendChild(card);
+
+  const optionsEl = card.querySelector('#options');
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerHTML = `<span class="option-letter">${LETTERS[i]}</span><span>${opt}</span>`;
+    btn.onclick = () => handleAnswer(i);
+    optionsEl.appendChild(btn);
+  });
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'next-btn';
+  nextBtn.id = 'next-btn';
+  nextBtn.textContent = current === questions.length - 1 ? 'Voir les résultats →' : 'Question suivante →';
+  nextBtn.onclick = () => { current++; render(); updateProgress(); };
+  container.appendChild(nextBtn);
+
+  updateProgress();
+}
+
+function handleAnswer(chosen) {
+  const q = questions[current];
+  const options = document.querySelectorAll('.option');
+  const explanation = document.getElementById('explanation');
+  const nextBtn = document.getElementById('next-btn');
+
+  options.forEach(b => b.disabled = true);
+
+  const isCorrect = chosen === q.correct;
+  if (isCorrect) score++;
+  results[current] = isCorrect;
+
+  options.forEach((btn, i) => {
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === chosen && !isCorrect) { btn.classList.add('wrong'); btn.classList.add('shake'); }
+    else btn.classList.add('dimmed');
+  });
+
+  explanation.classList.add('show');
+  nextBtn.classList.add('show');
+}
+
+function updateProgress() {
+  const pct = (current / questions.length) * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${current} / ${questions.length}`;
+}
+
+function showResults() {
+  document.getElementById('quiz-container').innerHTML = '';
+  const resultsEl = document.getElementById('results');
+  resultsEl.style.display = 'block';
+
+  document.getElementById('score-num').textContent = score;
+
+  const circumference = 427.26;
+  setTimeout(() => {
+    document.getElementById('ring-fill').style.strokeDashoffset =
+      circumference - (score / questions.length) * circumference;
+  }, 100);
+
+  const pct = score / questions.length;
+  let title, msg;
+  if (pct === 1) {
+    title = "Score parfait ! 🎉";
+    msg = "Maîtrise complète du layout Flutter. Vous êtes prêt pour les widgets avancés, la navigation et la gestion d'état.";
+  } else if (pct >= 0.8) {
+    title = "Très bien ! 🚀";
+    msg = "Excellente compréhension du système de layout Flutter. Revoyez les questions manquées pour consolider vos bases.";
+  } else if (pct >= 0.6) {
+    title = "Pas mal ! 📚";
+    msg = "Bonne progression, mais Column, Row et la syntaxe collection for méritent encore un peu de pratique.";
+  } else {
+    title = "À retravailler 💪";
+    msg = "Le layout Flutter repose sur des concepts fondamentaux à maîtriser. Relisez le cours et retentez le quiz.";
+  }
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-msg').textContent   = msg;
+
+  const grid = document.getElementById('summary-grid');
+  grid.innerHTML = '';
+  results.forEach((ok, i) => {
+    const tile = document.createElement('div');
+    tile.className = `summary-tile ${ok ? 'ok' : 'ko'}`;
+    tile.title = `Question ${i+1} : ${ok ? 'Correct' : 'Incorrect'}`;
+    tile.textContent = `Q${i+1}`;
+    grid.appendChild(tile);
+  });
+
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-label').textContent = `${questions.length} / ${questions.length}`;
+}
+
+function restart() {
+  current = 0; score = 0; results = [];
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('ring-fill').style.strokeDashoffset = '427.26';
+  render();
+  updateProgress();
+}
+
+render();
+</script>
+</body>
+</html>
