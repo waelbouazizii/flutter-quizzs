@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — StatefulWidget et setState Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --flutter-blue: #0553B1; --flutter-sky: #54C5F8;
+    --bg: #050D1A; --surface: #0C1829; --surface2: #112240;
+    --border: rgba(84,197,248,0.15); --text: #E8F4FD; --muted: #6B8FAF;
+    --green: #00E5A0; --green-bg: rgba(0,229,160,0.08);
+    --red: #FF5C7A; --red-bg: rgba(255,92,122,0.08);
+    --yellow: #FFD166; --radius: 12px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(84,197,248,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(84,197,248,0.03) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  }
+  .orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+  .orb-1 { width: 500px; height: 500px; background: rgba(5,83,177,0.25); top: -150px; right: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: rgba(0,210,255,0.12); bottom: 100px; left: -100px; }
+
+  .wrapper { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header { text-align: center; margin-bottom: 56px; animation: fadeDown 0.7s ease both; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(84,197,248,0.1); border: 1px solid rgba(84,197,248,0.25);
+    border-radius: 999px; padding: 6px 16px; font-size: 11px;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em;
+    color: var(--flutter-sky); text-transform: uppercase; margin-bottom: 24px;
+  }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--flutter-sky); animation: pulse 2s infinite; }
+  h1 {
+    font-size: clamp(28px, 5vw, 42px); font-weight: 800; line-height: 1.15; letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #fff 30%, var(--flutter-sky));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px;
+  }
+  .subtitle { color: var(--muted); font-size: 15px; font-weight: 300; line-height: 1.6; }
+
+  .progress-wrap { margin-bottom: 48px; animation: fadeDown 0.7s 0.1s ease both; }
+  .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+  .progress-meta span:last-child { color: var(--flutter-sky); }
+  .progress-track { height: 3px; background: var(--surface2); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--flutter-blue), var(--flutter-sky)); border-radius: 999px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+
+  .question-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 36px; margin-bottom: 16px; animation: fadeUp 0.5s ease both; position: relative; overflow: hidden;
+  }
+  .question-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--flutter-blue), var(--flutter-sky), transparent); }
+
+  .q-number { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--flutter-sky); text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .q-number::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .q-text { font-size: 17px; font-weight: 600; line-height: 1.55; color: var(--text); margin-bottom: 28px; }
+
+  .q-code {
+    background: #1E1E1E; border: 1px solid rgba(84,197,248,0.1); border-radius: 8px;
+    padding: 14px 18px; margin: -8px 0 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #D4D4D4; line-height: 1.7; overflow-x: auto;
+  }
+  .kw { color: #569CD6; } .fn { color: #DCDCAA; } .cm { color: #6A9955; }
+  .str { color: #CE9178; } .ty { color: #4EC9B0; } .num { color: #B5CEA8; }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    display: flex; align-items: flex-start; gap: 14px; padding: 16px 20px;
+    background: var(--surface2); border: 1px solid transparent; border-radius: var(--radius);
+    cursor: pointer; transition: all 0.2s ease; text-align: left; width: 100%;
+    font-family: 'Sora', sans-serif; color: var(--text); font-size: 14px; line-height: 1.5;
+  }
+  .option:hover:not(:disabled) { border-color: rgba(84,197,248,0.3); background: rgba(84,197,248,0.05); transform: translateX(4px); }
+  .option:disabled { cursor: default; }
+  .option-letter {
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px;
+    background: rgba(84,197,248,0.1); border: 1px solid rgba(84,197,248,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+    color: var(--flutter-sky); transition: all 0.2s ease; margin-top: 1px;
+  }
+  .option.correct { border-color: var(--green); background: var(--green-bg); }
+  .option.correct .option-letter { background: var(--green); border-color: var(--green); color: #000; }
+  .option.wrong { border-color: var(--red); background: var(--red-bg); opacity: 0.7; }
+  .option.wrong .option-letter { background: var(--red); border-color: var(--red); color: #fff; }
+  .option.dimmed { opacity: 0.35; }
+
+  .explanation { display: none; margin-top: 20px; padding: 16px 20px; background: rgba(255,209,102,0.07); border: 1px solid rgba(255,209,102,0.2); border-radius: var(--radius); font-size: 13px; line-height: 1.65; color: #ccc; }
+  .explanation.show { display: block; animation: fadeUp 0.3s ease both; }
+  .explanation strong { color: var(--yellow); font-weight: 600; display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+
+  .next-btn { display: none; margin-top: 20px; width: 100%; padding: 16px; background: linear-gradient(135deg, var(--flutter-blue), #0870E0); border: none; border-radius: var(--radius); color: #fff; font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; letter-spacing: 0.02em; transition: all 0.2s ease; }
+  .next-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(5,83,177,0.4); }
+  .next-btn.show { display: block; animation: fadeUp 0.3s ease both; }
+
+  #results { display: none; text-align: center; animation: fadeUp 0.6s ease both; }
+  .score-ring { width: 160px; height: 160px; margin: 0 auto 32px; position: relative; }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring circle { fill: none; stroke-width: 8; stroke-linecap: round; }
+  .ring-bg { stroke: var(--surface2); }
+  .ring-fill { stroke: url(#sg); transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+  .score-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .score-number { font-size: 42px; font-weight: 800; line-height: 1; background: linear-gradient(135deg, #fff, var(--flutter-sky)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .score-denom { font-size: 14px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .result-title { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+  .result-msg { color: var(--muted); font-size: 15px; line-height: 1.6; margin-bottom: 36px; }
+  .restart-btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px; background: transparent; border: 1px solid rgba(84,197,248,0.3); border-radius: var(--radius); color: var(--flutter-sky); font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+  .restart-btn:hover { background: rgba(84,197,248,0.08); border-color: var(--flutter-sky); transform: translateY(-2px); }
+  .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 32px 0; }
+  .summary-tile { aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; transition: transform 0.2s; }
+  .summary-tile:hover { transform: scale(1.1); }
+  .summary-tile.ok { background: var(--green-bg); border: 1px solid var(--green); color: var(--green); }
+  .summary-tile.ko { background: var(--red-bg); border: 1px solid var(--red); color: var(--red); }
+
+  /* Birdle live demo styles */
+  .demo-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin: -8px 0 20px; }
+  .demo-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-bottom: 16px; }
+  .demo-grid { display: flex; flex-direction: column; gap: 6px; align-items: center; margin-bottom: 16px; }
+  .demo-row { display: flex; gap: 6px; }
+  .demo-tile {
+    width: 44px; height: 44px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px;
+    border: 2px solid rgba(84,197,248,0.2); background: var(--surface); color: var(--text);
+    transition: background 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+  }
+  .demo-tile.hit     { background: #2D6A4F; border-color: #52B788; color: #D8F3DC; }
+  .demo-tile.partial { background: #7B5E00; border-color: #F4A261; color: #FFE8C8; }
+  .demo-tile.miss    { background: #374151; border-color: #6B7280; color: #9CA3AF; }
+  .demo-input-row { display: flex; gap: 8px; align-items: center; }
+  .demo-input {
+    flex: 1; padding: 10px 16px; background: var(--surface); border: 1px solid rgba(84,197,248,0.3);
+    border-radius: 999px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    outline: none;
+  }
+  .demo-input:focus { border-color: var(--flutter-sky); }
+  .demo-submit {
+    padding: 10px 18px; background: linear-gradient(135deg, var(--flutter-blue), #0870E0);
+    border: none; border-radius: 999px; color: #fff; font-family: 'Sora', sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  }
+  .demo-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(5,83,177,0.4); }
+  .demo-msg { margin-top: 10px; font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; min-height: 18px; text-align: center; }
+  .demo-msg.ok { color: var(--green); }
+  .demo-msg.err { color: var(--red); }
+
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeUp   { from { opacity: 0; transform: translateY(16px);  } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse    { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  @keyframes shake    { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+  .shake { animation: shake 0.35s ease; }
+  @media (max-width: 520px) { .question-card { padding: 24px 20px; } .q-text { font-size: 15px; } .option { font-size: 13px; } }
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="wrapper">
+  <header>
+    <div class="badge"><span class="badge-dot"></span>IAM1 · Flutter</div>
+    <h1>StatefulWidget<br>& setState</h1>
+    <p class="subtitle">Quiz d'auto-évaluation · 5 questions · État mutable · Cycle de vie · Reconstruction de l'UI</p>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-meta"><span>PROGRESSION</span><span id="progress-label">0 / 5</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+
+  <div id="quiz-container"></div>
+
+  <div id="results">
+    <div class="score-ring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs>
+          <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#0553B1"/>
+            <stop offset="100%" stop-color="#54C5F8"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="80" cy="80" r="68"/>
+        <circle class="ring-fill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="ring-fill"/>
+      </svg>
+      <div class="score-label">
+        <span class="score-number" id="score-num">0</span>
+        <span class="score-denom">/ 5</span>
+      </div>
+    </div>
+    <h2 class="result-title" id="result-title"></h2>
+    <p class="result-msg" id="result-msg"></p>
+    <div class="summary-grid" id="summary-grid"></div>
+    <button class="restart-btn" onclick="restart()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+      Recommencer le quiz
+    </button>
+  </div>
+</div>
+
+<script>
+// ── Mini Birdle demo engine ────────────────────────────────────────────────
+const TARGET = 'crane';
+
+function evaluateGuess(guess, target) {
+  const result = [];
+  const t = target.split('');
+  const g = guess.split('');
+  const used = new Array(5).fill(false);
+  // pass 1: hits
+  for (let i = 0; i < 5; i++) {
+    if (g[i] === t[i]) { result[i] = 'hit'; used[i] = true; }
+    else result[i] = null;
+  }
+  // pass 2: partial / miss
+  for (let i = 0; i < 5; i++) {
+    if (result[i]) continue;
+    const found = t.findIndex((c, j) => !used[j] && c === g[i]);
+    if (found !== -1) { result[i] = 'partial'; used[found] = true; }
+    else result[i] = 'miss';
+  }
+  return result;
+}
+
+// ── Quiz data ─────────────────────────────────────────────────────────────
+const questions = [
+  {
+    q: "Quand faut-il utiliser un StatefulWidget plutôt qu'un StatelessWidget ?",
+    code: [
+      "<span class='cm'>// Lequel choisir pour GamePage ?</span>",
+      "<span class='kw'>class</span> <span class='ty'>GamePage</span> <span class='kw'>extends</span> ??? {",
+      "  <span class='kw'>final</span> <span class='ty'>Game</span> _game = <span class='fn'>Game</span>();",
+      "  <span class='cm'>// La grille doit se mettre à jour à chaque devinette...</span>",
+      "}",
+    ],
+    options: [
+      "Quand le widget doit effectuer des requêtes HTTP.",
+      "Quand l'apparence ou les données du widget doivent changer pendant sa durée de vie.",
+      "Quand le widget possède plus de trois widgets enfants.",
+      "Quand le widget est à la racine de l'arbre de widgets.",
+    ],
+    correct: 1,
+    explanation: "La règle : si le widget peut changer après sa création (données mises à jour, interactions utilisateur, animations...), il faut un StatefulWidget. S'il est entièrement déterminé par ses paramètres de construction et ne change jamais, un StatelessWidget suffit.",
+    demo: true,
+  },
+  {
+    q: "Que se passe-t-il si on modifie une propriété dans un State sans appeler setState() ?",
+    code: [
+      "<span class='kw'>class</span> _GamePageState <span class='kw'>extends</span> <span class='ty'>State</span>&lt;<span class='ty'>GamePage</span>&gt; {",
+      "  <span class='kw'>final</span> <span class='ty'>Game</span> _game = <span class='fn'>Game</span>();",
+      "",
+      "  <span class='kw'>void</span> <span class='fn'>_handleGuess</span>(<span class='ty'>String</span> guess) {",
+      "    _game.<span class='fn'>guess</span>(guess); <span class='cm'>// ← sans setState() !</span>",
+      "  }",
+      "}",
+    ],
+    options: [
+      "L'application plante avec une exception.",
+      "La donnée change en mémoire, mais Flutter ne reconstruit pas l'UI — l'écran reste figé.",
+      "Flutter détecte automatiquement le changement et reconstruit l'UI.",
+      "Le widget est retiré de l'arbre de widgets.",
+    ],
+    correct: 1,
+    explanation: "Sans setState(), Flutter ne sait pas qu'une reconstruction est nécessaire. La donnée change en mémoire, mais build() n'est pas rappelé — l'utilisateur ne voit aucun changement à l'écran. C'est un bug silencieux classique en Flutter.",
+  },
+  {
+    q: "Dans un StatefulWidget, où doit-on placer la méthode build() et les propriétés mutables ?",
+    code: [
+      "<span class='kw'>class</span> <span class='ty'>GamePage</span> <span class='kw'>extends</span> <span class='ty'>StatefulWidget</span> {",
+      "  <span class='cm'>// ← build() ICI ou...</span>",
+      "}",
+      "",
+      "<span class='kw'>class</span> _GamePageState <span class='kw'>extends</span> <span class='ty'>State</span>&lt;<span class='ty'>GamePage</span>&gt; {",
+      "  <span class='cm'>// ← ...build() ICI ?</span>",
+      "}",
+    ],
+    options: [
+      "Dans la classe du StatefulWidget, comme pour un StatelessWidget.",
+      "Dans l'objet State associé (la classe _GamePageState).",
+      "Dans une classe utilitaire externe au widget.",
+      "Dans la méthode main() de l'application.",
+    ],
+    correct: 1,
+    explanation: "build() et les propriétés mutables appartiennent toujours à l'objet State. Le StatefulWidget lui-même reste immuable — il ne contient que createState() et les propriétés finales passées en paramètre par le parent.",
+  },
+  {
+    q: "Dans quel ordre se produisent les événements lors d'un appel à setState() ?",
+    options: [
+      "build() est appelé → setState() enregistre le changement → l'UI se met à jour.",
+      "Le callback de setState() modifie l'état → Flutter marque le widget 'dirty' → build() est appelé au prochain frame.",
+      "Le widget est recréé depuis zéro → State est réinitialisé → build() est appelé.",
+      "L'écran est effacé → setState() recalcule tout l'arbre → les widgets sont redessinés.",
+    ],
+    correct: 1,
+    explanation: "L'ordre correct : (1) le callback de setState() s'exécute et modifie les données, (2) Flutter marque le widget 'dirty', (3) au prochain frame build() est appelé avec le nouvel état, (4) Flutter compare l'ancien et le nouvel arbre (diffing) et ne redessine que ce qui a réellement changé.",
+  },
+  {
+    q: "Dans Birdle, pourquoi _game est-il déclaré final dans _GamePageState alors qu'on appelle _game.guess() pour le modifier ?",
+    code: [
+      "<span class='kw'>class</span> _GamePageState <span class='kw'>extends</span> <span class='ty'>State</span>&lt;<span class='ty'>GamePage</span>&gt; {",
+      "  <span class='kw'>final</span> <span class='ty'>Game</span> _game = <span class='fn'>Game</span>(); <span class='cm'>// final + mutation ?</span>",
+      "",
+      "  <span class='kw'>void</span> <span class='fn'>_handleGuess</span>(<span class='ty'>String</span> g) {",
+      "    <span class='fn'>setState</span>(() => _game.<span class='fn'>guess</span>(g)); <span class='cm'>// ← comment est-ce possible ?</span>",
+      "  }",
+      "}",
+    ],
+    options: [
+      "Par erreur — _game devrait être déclaré avec var pour autoriser les modifications.",
+      "Parce que final s'applique à la référence, pas au contenu : _game pointe toujours vers le même objet Game, mais ses données internes (les devinettes) peuvent changer via ses méthodes.",
+      "Parce que final en Dart empêche uniquement les appels aux setters, pas aux méthodes.",
+      "Pour améliorer les performances — final est optimisé par le compilateur Dart.",
+    ],
+    correct: 1,
+    explanation: "En Dart, final signifie que la variable ne peut pas être réassignée (la référence est figée). L'objet pointé peut parfaitement être modifié via ses méthodes. 'final Game _game = Game()' veut dire que _game ne peut pas pointer vers un autre objet Game — mais _game.guess() peut tout à fait modifier son état interne.",
+  },
+];
+
+const LETTERS = ['A','B','C','D'];
+let current = 0, score = 0, results = [];
+
+// ── Mini Birdle demo state ────────────────────────────────────────────────
+let demoGuesses = [];
+let demoOver = false;
+
+function renderDemo(container) {
+  const wrap = document.createElement('div');
+  wrap.className = 'demo-wrap';
+  wrap.innerHTML = `
+    <div class="demo-label">🎮 Mini Birdle interactif — devinez le mot (5 lettres)</div>
+    <div class="demo-grid" id="demo-grid"></div>
+    <div class="demo-input-row">
+      <input class="demo-input" id="demo-input" maxlength="5" placeholder="mot en 5 lettres..." autocomplete="off" spellcheck="false"/>
+      <button class="demo-submit" id="demo-btn">→</button>
+    </div>
+    <div class="demo-msg" id="demo-msg">Tapez un mot et appuyez sur → pour deviner.</div>
+  `;
+  container.appendChild(wrap);
+  renderDemoGrid();
+  document.getElementById('demo-btn').onclick = submitDemo;
+  document.getElementById('demo-input').onkeydown = function(e) { if (e.key === 'Enter') submitDemo(); };
+}
+
+function renderDemoGrid() {
+  const grid = document.getElementById('demo-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  for (let r = 0; r < 5; r++) {
+    const row = document.createElement('div');
+    row.className = 'demo-row';
+    for (let c = 0; c < 5; c++) {
+      const tile = document.createElement('div');
+      tile.className = 'demo-tile';
+      if (demoGuesses[r]) {
+        const g = demoGuesses[r];
+        tile.textContent = g.word[c].toUpperCase();
+        tile.classList.add(g.result[c]);
+      }
+      row.appendChild(tile);
+    }
+    grid.appendChild(row);
+  }
+}
+
+function submitDemo() {
+  if (demoOver) return;
+  const input = document.getElementById('demo-input');
+  const msg = document.getElementById('demo-msg');
+  const word = input.value.trim().toLowerCase();
+  if (word.length !== 5) {
+    msg.textContent = '⚠ Entrez exactement 5 lettres.'; msg.className = 'demo-msg err'; return;
+  }
+  const result = evaluateGuess(word, TARGET);
+  demoGuesses.push({ word, result });
+  input.value = '';
+  renderDemoGrid();
+  if (word === TARGET) {
+    demoOver = true;
+    msg.textContent = '🎉 Bravo ! C\'était bien "' + TARGET.toUpperCase() + '" !'; msg.className = 'demo-msg ok';
+    input.disabled = true;
+    document.getElementById('demo-btn').disabled = true;
+  } else if (demoGuesses.length >= 5) {
+    demoOver = true;
+    msg.textContent = '😔 Perdu ! Le mot était "' + TARGET.toUpperCase() + '".'; msg.className = 'demo-msg err';
+    input.disabled = true;
+    document.getElementById('demo-btn').disabled = true;
+  } else {
+    const hints = { hit: result.filter(r=>r==='hit').length, partial: result.filter(r=>r==='partial').length };
+    msg.textContent = `→ ${hints.hit} bonne(s) position, ${hints.partial} lettre(s) mal placée(s).`;
+    msg.className = 'demo-msg';
+  }
+}
+
+// ── Quiz engine ───────────────────────────────────────────────────────────
+function render() {
+  const container = document.getElementById('quiz-container');
+  if (current >= questions.length) { showResults(); return; }
+
+  const q = questions[current];
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'question-card';
+
+  const codeHtml = q.code ? `<div class="q-code">${q.code.join('<br>')}</div>` : '';
+  card.innerHTML = `
+    <div class="q-number">Question ${current + 1} sur ${questions.length}</div>
+    <p class="q-text">${q.q}</p>
+    ${codeHtml}
+    ${q.demo ? '<div id="demo-slot"></div>' : ''}
+    <div class="options" id="options"></div>
+    <div class="explanation" id="explanation"><strong>💡 Explication</strong>${q.explanation}</div>
+  `;
+  container.appendChild(card);
+
+  if (q.demo) renderDemo(document.getElementById('demo-slot'));
+
+  const optionsEl = card.querySelector('#options');
+  q.options.forEach(function(opt, i) {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerHTML = `<span class="option-letter">${LETTERS[i]}</span><span>${opt}</span>`;
+    btn.onclick = function() { handleAnswer(i); };
+    optionsEl.appendChild(btn);
+  });
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'next-btn';
+  nextBtn.id = 'next-btn';
+  nextBtn.textContent = current === questions.length - 1 ? 'Voir les résultats →' : 'Question suivante →';
+  nextBtn.onclick = function() { current++; render(); updateProgress(); };
+  container.appendChild(nextBtn);
+  updateProgress();
+}
+
+function handleAnswer(chosen) {
+  const q = questions[current];
+  const options = document.querySelectorAll('.option');
+  options.forEach(function(b) { b.disabled = true; });
+  const isCorrect = chosen === q.correct;
+  if (isCorrect) score++;
+  results[current] = isCorrect;
+  options.forEach(function(btn, i) {
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === chosen && !isCorrect) { btn.classList.add('wrong'); btn.classList.add('shake'); }
+    else btn.classList.add('dimmed');
+  });
+  document.getElementById('explanation').classList.add('show');
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function updateProgress() {
+  document.getElementById('progress-fill').style.width = (current / questions.length * 100) + '%';
+  document.getElementById('progress-label').textContent = `${current} / ${questions.length}`;
+}
+
+function showResults() {
+  document.getElementById('quiz-container').innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('score-num').textContent = score;
+  setTimeout(function() {
+    document.getElementById('ring-fill').style.strokeDashoffset = 427.26 - (score / questions.length) * 427.26;
+  }, 100);
+  const pct = score / questions.length;
+  let title, msg;
+  if (pct === 1) {
+    title = "Score parfait ! 🎉"; msg = "Maîtrise totale des StatefulWidgets. Vous êtes prêt pour les animations implicites !";
+  } else if (pct >= 0.8) {
+    title = "Très bien ! 🚀"; msg = "Excellente compréhension de setState() et du cycle de vie. Revoyez les questions manquées.";
+  } else if (pct >= 0.6) {
+    title = "Pas mal ! 📚"; msg = "Bonne base. Pratiquez la conversion StatelessWidget → StatefulWidget et le mécanisme setState().";
+  } else {
+    title = "À retravailler 💪"; msg = "Relisez le cours sur StatefulWidget, refaites le TP de conversion, puis retentez le quiz.";
+  }
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-msg').textContent = msg;
+  const grid = document.getElementById('summary-grid');
+  grid.innerHTML = '';
+  results.forEach(function(ok, i) {
+    const tile = document.createElement('div');
+    tile.className = 'summary-tile ' + (ok ? 'ok' : 'ko');
+    tile.title = 'Question ' + (i + 1) + ' : ' + (ok ? 'Correct' : 'Incorrect');
+    tile.textContent = 'Q' + (i + 1);
+    grid.appendChild(tile);
+  });
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-label').textContent = '5 / 5';
+}
+
+function restart() {
+  current = 0; score = 0; results = [];
+  demoGuesses = []; demoOver = false;
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('ring-fill').style.strokeDashoffset = '427.26';
+  render(); updateProgress();
+}
+
+render();
+</script>
+</body>
+</html>
