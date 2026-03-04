@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Gestion d'État MVVM Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --fb: #0553B1; --fs: #54C5F8; --bg: #050D1A; --sf: #0C1829; --sf2: #112240;
+  --bd: rgba(84,197,248,0.15); --tx: #E8F4FD; --mt: #6B8FAF;
+  --gn: #00E5A0; --gnb: rgba(0,229,160,0.08);
+  --rd: #FF5C7A; --rdb: rgba(255,92,122,0.08);
+  --yw: #FFD166; --mb: #B8D4F5; --r: 12px;
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--tx); min-height: 100vh; overflow-x: hidden; }
+body::before { content:''; position:fixed; inset:0;
+  background-image: linear-gradient(rgba(84,197,248,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(84,197,248,0.03) 1px,transparent 1px);
+  background-size:40px 40px; pointer-events:none; z-index:0; }
+.orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; }
+.orb1 { width:500px; height:500px; background:rgba(5,83,177,0.25); top:-150px; right:-100px; }
+.orb2 { width:400px; height:400px; background:rgba(0,210,255,0.12); bottom:100px; left:-100px; }
+.wrap { position:relative; z-index:1; max-width:780px; margin:0 auto; padding:40px 24px 80px; }
+
+header { text-align:center; margin-bottom:52px; animation:fd 0.7s ease both; }
+.badge { display:inline-flex; align-items:center; gap:8px; background:rgba(84,197,248,0.1); border:1px solid rgba(84,197,248,0.25); border-radius:999px; padding:6px 16px; font-size:11px; font-family:'JetBrains Mono',monospace; letter-spacing:0.12em; color:var(--fs); text-transform:uppercase; margin-bottom:20px; }
+.dot { width:6px; height:6px; border-radius:50%; background:var(--fs); animation:pulse 2s infinite; }
+h1 { font-size:clamp(26px,5vw,40px); font-weight:800; line-height:1.15; letter-spacing:-0.03em; background:linear-gradient(135deg,#fff 30%,var(--fs)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:10px; }
+.sub { color:var(--mt); font-size:14px; font-weight:300; line-height:1.6; }
+
+.pgwrap { margin-bottom:44px; }
+.pgmeta { display:flex; justify-content:space-between; font-size:12px; font-family:'JetBrains Mono',monospace; color:var(--mt); margin-bottom:8px; }
+.pgmeta span:last-child { color:var(--fs); }
+.pgtrk { height:3px; background:var(--sf2); border-radius:999px; overflow:hidden; }
+.pgfill { height:100%; background:linear-gradient(90deg,var(--fb),var(--fs)); border-radius:999px; transition:width 0.5s cubic-bezier(.4,0,.2,1); width:0%; }
+
+/* MVVM diagram */
+.mvvm-diagram { display:grid; grid-template-columns:1fr 40px 1fr 40px 1fr; gap:0; align-items:center; margin:-4px 0 20px; }
+.mvvm-layer { padding:14px 12px; border-radius:10px; text-align:center; }
+.mvvm-model { background:rgba(0,105,92,0.2); border:1px solid rgba(0,229,160,0.3); }
+.mvvm-vm    { background:rgba(91,45,142,0.2); border:1px solid rgba(178,102,255,0.3); }
+.mvvm-view  { background:rgba(5,83,177,0.2);  border:1px solid rgba(84,197,248,0.3); }
+.mvvm-arrow { text-align:center; color:var(--mt); font-size:18px; }
+.mvvm-label { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:4px; }
+.mvvm-name  { font-weight:700; font-size:13px; margin-bottom:3px; }
+.mvvm-desc  { font-size:10px; color:var(--mt); line-height:1.4; }
+.mvvm-model .mvvm-label { color:var(--gn); }
+.mvvm-vm    .mvvm-label { color:#B266FF; }
+.mvvm-view  .mvvm-label { color:var(--fs); }
+
+/* State flow demo */
+.state-demo { background:var(--sf2); border:1px solid var(--bd); border-radius:14px; padding:20px; margin:-4px 0 20px; }
+.state-demo-label { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; color:var(--mt); text-transform:uppercase; margin-bottom:14px; }
+.state-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.state-btn { padding:7px 14px; border-radius:8px; border:1px solid rgba(84,197,248,0.3); background:transparent; color:var(--fs); font-family:'Sora',monospace; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.state-btn:hover { background:rgba(84,197,248,0.08); }
+.state-btn.active { background:var(--fb); border-color:var(--fb); color:#fff; }
+.state-display { border-radius:10px; padding:18px; min-height:80px; display:flex; align-items:center; justify-content:center; transition:all 0.35s ease; }
+.state-loading { background:rgba(84,197,248,0.08); border:1px solid rgba(84,197,248,0.2); }
+.state-success { background:rgba(0,229,160,0.08); border:1px solid rgba(0,229,160,0.25); }
+.state-error   { background:rgba(255,92,122,0.08);  border:1px solid rgba(255,92,122,0.25); }
+.state-empty   { background:rgba(255,209,102,0.08); border:1px solid rgba(255,209,102,0.25); }
+.spinner { width:28px; height:28px; border:3px solid rgba(84,197,248,0.2); border-top-color:var(--fs); border-radius:50%; animation:spin 0.8s linear infinite; }
+.state-article { text-align:left; width:100%; }
+.sa-title { font-weight:700; font-size:14px; margin-bottom:4px; color:var(--gn); }
+.sa-desc  { font-size:12px; color:var(--mt); margin-bottom:6px; }
+.sa-extract { font-size:12px; line-height:1.5; }
+.sa-img   { width:100%; height:60px; background:rgba(84,197,248,0.08); border-radius:6px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; color:var(--mt); font-size:11px; font-family:'JetBrains Mono',monospace; }
+
+/* Shared card styles */
+.card { background:var(--sf); border:1px solid var(--bd); border-radius:20px; padding:34px; margin-bottom:16px; animation:fu 0.5s ease both; position:relative; overflow:hidden; }
+.card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--fb),var(--fs),transparent); }
+.qnum { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.15em; color:var(--fs); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.qnum::after { content:''; flex:1; height:1px; background:var(--bd); }
+.qtxt { font-size:17px; font-weight:600; line-height:1.55; margin-bottom:24px; }
+.qcode { background:#1E1E1E; border:1px solid rgba(84,197,248,0.1); border-radius:8px; padding:12px 16px; margin:-4px 0 18px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#D4D4D4; line-height:1.7; overflow-x:auto; }
+.kw{color:#569CD6}.fn{color:#DCDCAA}.cm{color:#6A9955}.str{color:#CE9178}.ty{color:#4EC9B0}
+
+.opts { display:flex; flex-direction:column; gap:9px; }
+.opt { display:flex; align-items:flex-start; gap:13px; padding:14px 18px; background:var(--sf2); border:1px solid transparent; border-radius:var(--r); cursor:pointer; transition:all 0.2s; text-align:left; width:100%; font-family:'Sora',sans-serif; color:var(--tx); font-size:14px; line-height:1.5; }
+.opt:hover:not(:disabled) { border-color:rgba(84,197,248,0.3); background:rgba(84,197,248,0.05); transform:translateX(4px); }
+.opt:disabled { cursor:default; }
+.ol { flex-shrink:0; width:26px; height:26px; border-radius:6px; background:rgba(84,197,248,0.1); border:1px solid rgba(84,197,248,0.2); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--fs); margin-top:1px; }
+.opt.correct { border-color:var(--gn); background:var(--gnb); }
+.opt.correct .ol { background:var(--gn); border-color:var(--gn); color:#000; }
+.opt.wrong { border-color:var(--rd); background:var(--rdb); opacity:0.7; }
+.opt.wrong .ol { background:var(--rd); border-color:var(--rd); color:#fff; }
+.opt.dimmed { opacity:0.32; }
+
+.expl { display:none; margin-top:18px; padding:14px 18px; background:rgba(255,209,102,0.07); border:1px solid rgba(255,209,102,0.2); border-radius:var(--r); font-size:13px; line-height:1.65; color:#ccc; }
+.expl.show { display:block; animation:fu 0.3s ease both; }
+.expl strong { color:var(--yw); font-weight:600; display:block; margin-bottom:3px; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; }
+.nbtn { display:none; margin-top:18px; width:100%; padding:15px; background:linear-gradient(135deg,var(--fb),#0870E0); border:none; border-radius:var(--r); color:#fff; font-family:'Sora',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.nbtn:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(5,83,177,0.4); }
+.nbtn.show { display:block; animation:fu 0.3s ease both; }
+
+#results { display:none; text-align:center; animation:fu 0.6s ease both; }
+.sring { width:160px; height:160px; margin:0 auto 28px; position:relative; }
+.sring svg { transform:rotate(-90deg); }
+.sring circle { fill:none; stroke-width:8; stroke-linecap:round; }
+.rbg { stroke:var(--sf2); }
+.rfill { stroke:url(#sg); transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1); }
+.slabel { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.snum { font-size:42px; font-weight:800; line-height:1; background:linear-gradient(135deg,#fff,var(--fs)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.sdenom { font-size:14px; color:var(--mt); font-family:'JetBrains Mono',monospace; }
+.rtitle { font-size:24px; font-weight:800; margin-bottom:8px; }
+.rmsg { color:var(--mt); font-size:14px; line-height:1.6; margin-bottom:32px; }
+.rbtn { display:inline-flex; align-items:center; gap:10px; padding:13px 28px; background:transparent; border:1px solid rgba(84,197,248,0.3); border-radius:var(--r); color:var(--fs); font-family:'Sora',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.rbtn:hover { background:rgba(84,197,248,0.08); transform:translateY(-2px); }
+.sgrid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:28px 0; }
+.stile { aspect-ratio:1; border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; transition:transform 0.2s; }
+.stile:hover { transform:scale(1.1); }
+.stile.ok { background:var(--gnb); border:1px solid var(--gn); color:var(--gn); }
+.stile.ko { background:var(--rdb); border:1px solid var(--rd); color:var(--rd); }
+
+@keyframes fd { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fu { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin { to{transform:rotate(360deg)} }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+.shake { animation:shake 0.35s ease; }
+@media(max-width:520px){ .card{padding:22px 18px} .qtxt{font-size:15px} .opt{font-size:13px} .mvvm-diagram{grid-template-columns:1fr 24px 1fr 24px 1fr} }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="wrap">
+
+  <header>
+    <div class="badge"><span class="dot"></span>IAM1 · Flutter — Gestion d'État</div>
+    <h1>Architecture MVVM<br>& Gestion d'État</h1>
+    <p class="sub">Quiz · 5 questions · HTTP · ChangeNotifier · ListenableBuilder · Wikipedia Reader</p>
+  </header>
+
+  <div class="pgwrap">
+    <div class="pgmeta"><span>PROGRESSION</span><span id="pglbl">0 / 5</span></div>
+    <div class="pgtrk"><div class="pgfill" id="pgfill"></div></div>
+  </div>
+
+  <div id="qc"></div>
+
+  <div id="results">
+    <div class="sring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#0553B1"/><stop offset="100%" stop-color="#54C5F8"/>
+        </linearGradient></defs>
+        <circle class="rbg" cx="80" cy="80" r="68"/>
+        <circle class="rfill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="rfill"/>
+      </svg>
+      <div class="slabel"><span class="snum" id="snum">0</span><span class="sdenom">/ 5</span></div>
+    </div>
+    <h2 class="rtitle" id="rtitle"></h2>
+    <p class="rmsg" id="rmsg"></p>
+    <div class="sgrid" id="sgrid"></div>
+    <button class="rbtn" onclick="restart()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+      Recommencer le quiz
+    </button>
+  </div>
+</div>
+
+<script>
+// ── State demo ─────────────────────────────────────────────────
+var demoState = 'loading';
+var demoArticles = [
+  { title: 'Programmation fonctionnelle', desc: 'Paradigme de programmation', extract: 'La programmation fonctionnelle est un paradigme de programmation traitant le calcul en tant qu\'évaluation de fonctions mathématiques.' },
+  { title: 'Machine de Turing', desc: 'Modèle abstrait de calcul', extract: 'Une machine de Turing est un modèle mathématique de calcul décrivant une machine abstraite qui manipule des symboles sur une bande.' },
+  { title: 'Algorithme de Dijkstra', desc: 'Algorithme de plus court chemin', extract: 'L\'algorithme de Dijkstra résout le problème du plus court chemin dans un graphe orienté pondéré à poids positifs.' },
+];
+var demoIdx = 0;
+
+function renderStateDemo(slot) {
+  var wrap = document.createElement('div');
+  wrap.className = 'state-demo';
+  wrap.innerHTML = '<div class="state-demo-label">🎮 Simulateur d\'états — ArticleViewModel interactif</div>' +
+    '<div class="state-btns">' +
+      '<button class="state-btn active" id="sb-loading" onclick="setDemo(\'loading\')">loading = true</button>' +
+      '<button class="state-btn" id="sb-success" onclick="setDemo(\'success\')">✅ Succès</button>' +
+      '<button class="state-btn" id="sb-error"   onclick="setDemo(\'error\')">❌ Erreur réseau</button>' +
+      '<button class="state-btn" id="sb-empty"   onclick="setDemo(\'empty\')">⚠ État inconnu</button>' +
+    '</div>' +
+    '<div id="sdisplay" class="state-display state-loading"></div>' +
+    '<div style="margin-top:10px;font-size:11px;color:var(--mt);font-family:JetBrains Mono,monospace" id="scode"></div>';
+  slot.appendChild(wrap);
+  updateDemoDisplay();
+}
+
+function setDemo(state) {
+  demoState = state;
+  ['loading','success','error','empty'].forEach(function(s) {
+    var b = document.getElementById('sb-'+s);
+    if (b) b.className = 'state-btn' + (s === state ? ' active' : '');
+  });
+  if (state === 'success') demoIdx = (demoIdx + 1) % demoArticles.length;
+  updateDemoDisplay();
+}
+
+function updateDemoDisplay() {
+  var d = document.getElementById('sdisplay');
+  var c = document.getElementById('scode');
+  if (!d) return;
+  if (demoState === 'loading') {
+    d.className = 'state-display state-loading';
+    d.innerHTML = '<div class="spinner"></div>';
+    if (c) c.textContent = '(true, _, _) → CircularProgressIndicator()';
+  } else if (demoState === 'success') {
+    var a = demoArticles[demoIdx];
+    d.className = 'state-display state-success';
+    d.innerHTML = '<div class="state-article">' +
+      '<div class="sa-img">🖼 Image réseau (si hasImage)</div>' +
+      '<div class="sa-title">' + a.title + '</div>' +
+      '<div class="sa-desc">' + a.desc + '</div>' +
+      '<div class="sa-extract">' + a.extract + '</div>' +
+      '</div>';
+    if (c) c.textContent = '(false, Summary summary, null) → ArticlePage(...)';
+  } else if (demoState === 'error') {
+    d.className = 'state-display state-error';
+    d.innerHTML = '<div style="text-align:center"><div style="font-size:28px;margin-bottom:8px">⚠️</div><div style="color:#FF5C7A;font-weight:600;font-size:14px">Requête échouée : 503</div><div style="color:var(--mt);font-size:12px;margin-top:4px">Service temporairement indisponible</div></div>';
+    if (c) c.textContent = '(false, _, String msg) → Center(child: Text(msg))';
+  } else {
+    d.className = 'state-display state-empty';
+    d.innerHTML = '<div style="text-align:center;color:var(--yw);font-size:13px">⚠ État indéterminé — ne devrait pas arriver</div>';
+    if (c) c.textContent = '(false, null, null) → Center(child: Text(\'Erreur inconnue\'))';
+  }
+}
+
+// ── MVVM diagram builder ───────────────────────────────────────
+function renderMvvmDiagram(slot) {
+  var d = document.createElement('div');
+  d.className = 'mvvm-diagram';
+  d.innerHTML =
+    '<div class="mvvm-layer mvvm-model">' +
+      '<div class="mvvm-label">Model</div>' +
+      '<div class="mvvm-name">ArticleModel</div>' +
+      '<div class="mvvm-desc">HTTP · JSON · Dart pur</div>' +
+    '</div>' +
+    '<div class="mvvm-arrow">⇄</div>' +
+    '<div class="mvvm-layer mvvm-vm">' +
+      '<div class="mvvm-label">ViewModel</div>' +
+      '<div class="mvvm-name">ArticleViewModel</div>' +
+      '<div class="mvvm-desc">ChangeNotifier · États</div>' +
+    '</div>' +
+    '<div class="mvvm-arrow">⇄</div>' +
+    '<div class="mvvm-layer mvvm-view">' +
+      '<div class="mvvm-label">View</div>' +
+      '<div class="mvvm-name">ArticleView</div>' +
+      '<div class="mvvm-desc">ListenableBuilder · UI</div>' +
+    '</div>';
+  slot.appendChild(d);
+}
+
+// ── Quiz data ──────────────────────────────────────────────────
+var Qs = [
+  {
+    q: "Dans l'architecture MVVM, quelle couche est responsable des requêtes HTTP et du parsing JSON ?",
+    mvvm: true,
+    options: [
+      "La View — elle récupère les données pour les afficher directement.",
+      "Le ViewModel — il orchestre toutes les opérations de données.",
+      "Le Model — il gère les opérations bas niveau sur les données, sans importer Flutter.",
+      "ListenableBuilder — il connecte les données à l'UI.",
+    ],
+    correct: 2,
+    expl: "ArticleModel est la couche de données pure : requêtes HTTP, parsing JSON, cache. Il n'importe jamais Flutter — code Dart pur. Cette séparation le rend testable indépendamment. Le ViewModel orchestre mais délègue le travail au Model.",
+  },
+  {
+    q: "Que se passe-t-il exactement quand ArticleViewModel appelle notifyListeners() ?",
+    code: [
+      "<span class='kw'>Future</span>&lt;<span class='kw'>void</span>&gt; <span class='fn'>getRandomArticleSummary</span>() <span class='kw'>async</span> {",
+      "  loading = <span class='kw'>true</span>;",
+      "  <span class='fn'>notifyListeners</span>(); <span class='cm'>// ← que se passe-t-il ici ?</span>",
+      "  <span class='cm'>// ...</span>",
+      "  loading = <span class='kw'>false</span>;",
+      "  <span class='fn'>notifyListeners</span>(); <span class='cm'>// ← et ici ?</span>",
+      "}",
+    ],
+    options: [
+      "L'application entière se reconstruit depuis MaterialApp.",
+      "Tous les ListenableBuilder qui écoutent ce ViewModel reconstituent leur sous-arbre.",
+      "Un message est affiché dans la console Flutter pour le débogage.",
+      "La méthode getRandomArticleSummary() est rappelée automatiquement.",
+    ],
+    correct: 1,
+    expl: "notifyListeners() déclenche les callbacks de tous les listeners enregistrés sur ce ChangeNotifier. Chaque ListenableBuilder qui a ce ViewModel comme listenable appelle son builder() — reconstruisant uniquement son propre sous-arbre, pas l'app entière.",
+  },
+  {
+    q: "Pourquoi utilise-t-on un switch expression sur le tuple (loading, summary, errorMessage) dans ListenableBuilder ?",
+    code: [
+      "<span class='kw'>return</span> <span class='kw'>switch</span> ((",
+      "  viewModel.loading,",
+      "  viewModel.summary,",
+      "  viewModel.errorMessage,",
+      ")) {",
+      "  (<span class='kw'>true</span>, _, _)                   => <span class='ty'>CircularProgressIndicator</span>(),",
+      "  (<span class='kw'>false</span>, _, <span class='ty'>String</span> msg)       => <span class='ty'>Text</span>(msg),",
+      "  (<span class='kw'>false</span>, <span class='kw'>null</span>, <span class='kw'>null</span>)          => <span class='ty'>Text</span>(<span class='str'>'Erreur inconnue'</span>),",
+      "  (<span class='kw'>false</span>, <span class='ty'>Summary</span> s, <span class='kw'>null</span>)   => <span class='ty'>ArticlePage</span>(summary: s),",
+      "};",
+    ],
+    demo: true,
+    options: [
+      "Pour améliorer les performances — switch est plus rapide que if/else en Dart.",
+      "Parce que ListenableBuilder exige un switch expression dans son builder.",
+      "Pour garantir l'exhaustivité : le compilateur vérifie que tous les états possibles sont couverts, évitant les bugs silencieux.",
+      "Pour afficher un message différent selon la langue de l'utilisateur.",
+    ],
+    correct: 2,
+    expl: "Le switch expression sur un tuple est exhaustif : le compilateur Dart vérifie statiquement que tous les cas sont couverts. Si un cas est oublié, c'est une erreur de compilation. Avec if/else, un cas oublié serait un bug silencieux à l'exécution.",
+  },
+  {
+    q: "Pourquoi le constructeur d'ArticleViewModel appelle-t-il getRandomArticleSummary() plutôt que d'être déclaré async ?",
+    code: [
+      "<span class='kw'>class</span> <span class='ty'>ArticleViewModel</span> <span class='kw'>extends</span> <span class='ty'>ChangeNotifier</span> {",
+      "  <span class='ty'>ArticleViewModel</span>(<span class='kw'>this</span>.model) {",
+      "    <span class='fn'>getRandomArticleSummary</span>(); <span class='cm'>// ← pourquoi pas 'await' ici ?</span>",
+      "  }",
+      "",
+      "  <span class='cm'>// Pas possible :</span>",
+      "  <span class='cm'>// ArticleViewModel(this.model) async { ... }</span>",
+      "}",
+    ],
+    options: [
+      "Pour des raisons de performance — les constructeurs async seraient plus lents.",
+      "Les constructeurs Dart ne peuvent pas être async. Appeler une méthode async depuis le constructeur est le seul moyen de lancer une opération asynchrone à l'initialisation.",
+      "Pour respecter une convention Flutter qui interdit les constructeurs async.",
+      "Parce que notifyListeners() ne peut pas être appelé depuis un constructeur async.",
+    ],
+    correct: 1,
+    expl: "En Dart, les constructeurs sont synchrones par définition — on ne peut pas les marquer async. La solution idiomatique est d'appeler une méthode async depuis le corps du constructeur. Cette méthode s'exécutera de façon asynchrone après que le constructeur ait retourné.",
+  },
+  {
+    q: "Quelle est la différence fondamentale entre setState() (TP précédent) et ListenableBuilder + ChangeNotifier ?",
+    code: [
+      "<span class='cm'>// setState() — état LOCAL à un StatefulWidget</span>",
+      "<span class='fn'>setState</span>(() { _count++; });",
+      "",
+      "<span class='cm'>// ChangeNotifier + ListenableBuilder — état EXTERNE partageable</span>",
+      "<span class='kw'>class</span> <span class='ty'>ArticleViewModel</span> <span class='kw'>extends</span> <span class='ty'>ChangeNotifier</span> {",
+      "  <span class='kw'>void</span> <span class='fn'>update</span>() { _data = newData; <span class='fn'>notifyListeners</span>(); }",
+      "}",
+      "<span class='ty'>ListenableBuilder</span>(listenable: vm, builder: (ctx, _) => <span class='ty'>UI</span>());",
+    ],
+    options: [
+      "setState() est plus récent et remplace ListenableBuilder dans les nouvelles versions Flutter.",
+      "setState() gère un état local à un widget. ChangeNotifier + ListenableBuilder gèrent un état externe partageable, hors de l'arbre de widgets.",
+      "ListenableBuilder est plus performant car il évite toute reconstruction.",
+      "setState() est réservé aux animations, ListenableBuilder aux données réseau.",
+    ],
+    correct: 1,
+    expl: "setState() reconstruit l'état local d'un StatefulWidget — simple et suffisant pour un état purement visuel. ChangeNotifier + ListenableBuilder permettent un état qui vit hors du widget tree, partageable entre plusieurs widgets, testable indépendamment de l'UI. MVVM recommande ChangeNotifier pour tout état métier.",
+  },
+];
+
+var LETTERS = ['A','B','C','D'];
+var cur = 0, score = 0, results = [];
+
+function render() {
+  var c = document.getElementById('qc');
+  if (cur >= Qs.length) { showResults(); return; }
+  var q = Qs[cur];
+  c.innerHTML = '';
+
+  var card = document.createElement('div');
+  card.className = 'card';
+
+  var codeHtml = q.code ? '<div class="qcode">' + q.code.join('<br>') + '</div>' : '';
+  card.innerHTML =
+    '<div class="qnum">Question ' + (cur+1) + ' sur ' + Qs.length + '</div>' +
+    '<p class="qtxt">' + q.q + '</p>' +
+    (q.mvvm ? '<div id="mvvm-slot"></div>' : '') +
+    codeHtml +
+    (q.demo ? '<div id="demo-slot"></div>' : '') +
+    '<div class="opts" id="opts"></div>' +
+    '<div class="expl" id="expl"><strong>💡 Explication</strong>' + q.expl + '</div>';
+  c.appendChild(card);
+
+  if (q.mvvm) renderMvvmDiagram(document.getElementById('mvvm-slot'));
+  if (q.demo) renderStateDemo(document.getElementById('demo-slot'));
+
+  var optsEl = card.querySelector('#opts');
+  q.options.forEach(function(opt, i) {
+    var btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.innerHTML = '<span class="ol">' + LETTERS[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = function() { handleAnswer(i); };
+    optsEl.appendChild(btn);
+  });
+
+  var nb = document.createElement('button');
+  nb.className = 'nbtn'; nb.id = 'nbtn';
+  nb.textContent = cur === Qs.length-1 ? 'Voir les résultats →' : 'Question suivante →';
+  nb.onclick = function() { cur++; render(); updatePg(); };
+  c.appendChild(nb);
+  updatePg();
+}
+
+function handleAnswer(chosen) {
+  var q = Qs[cur];
+  var opts = document.querySelectorAll('.opt');
+  opts.forEach(function(b) { b.disabled = true; });
+  var ok = chosen === q.correct;
+  if (ok) score++;
+  results[cur] = ok;
+  opts.forEach(function(b, i) {
+    if (i === q.correct) b.classList.add('correct');
+    else if (i === chosen && !ok) { b.classList.add('wrong'); b.classList.add('shake'); }
+    else b.classList.add('dimmed');
+  });
+  document.getElementById('expl').classList.add('show');
+  document.getElementById('nbtn').classList.add('show');
+}
+
+function updatePg() {
+  document.getElementById('pgfill').style.width = (cur / Qs.length * 100) + '%';
+  document.getElementById('pglbl').textContent = cur + ' / ' + Qs.length;
+}
+
+function showResults() {
+  document.getElementById('qc').innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('snum').textContent = score;
+  setTimeout(function() {
+    document.getElementById('rfill').style.strokeDashoffset = 427.26 - (score / Qs.length) * 427.26;
+  }, 100);
+  var pct = score / Qs.length;
+  var t, m;
+  if (pct === 1) { t = 'Score parfait ! 🎉'; m = 'Architecture MVVM parfaitement maîtrisée. Vous êtes prêts pour les prochains TPs Flutter avancés !'; }
+  else if (pct >= 0.8) { t = 'Très bien ! 🚀'; m = 'Excellente compréhension de MVVM, ChangeNotifier et ListenableBuilder. Revoyez les questions manquées.'; }
+  else if (pct >= 0.6) { t = 'Bien ! 📚'; m = 'Bonne base. Relisez la section sur le flux de données MVVM et l\'exhaustivité du switch expression.'; }
+  else { t = 'À retravailler 💪'; m = 'Refaites le TP en vous concentrant sur les responsabilités de chaque couche MVVM, puis retentez le quiz.'; }
+  document.getElementById('rtitle').textContent = t;
+  document.getElementById('rmsg').textContent = m;
+  var g = document.getElementById('sgrid'); g.innerHTML = '';
+  results.forEach(function(ok, i) {
+    var tile = document.createElement('div');
+    tile.className = 'stile ' + (ok ? 'ok' : 'ko');
+    tile.title = 'Q' + (i+1) + ' : ' + (ok ? 'Correct' : 'Incorrect');
+    tile.textContent = 'Q'+(i+1);
+    g.appendChild(tile);
+  });
+  document.getElementById('pgfill').style.width = '100%';
+  document.getElementById('pglbl').textContent = '5 / 5';
+}
+
+function restart() {
+  cur = 0; score = 0; results = [];
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('rfill').style.strokeDashoffset = '427.26';
+  render(); updatePg();
+}
+
+render();
+</script>
+</body>
+</html>
