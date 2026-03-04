@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Animations Implicites Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --flutter-blue: #0553B1; --flutter-sky: #54C5F8;
+    --bg: #050D1A; --surface: #0C1829; --surface2: #112240;
+    --border: rgba(84,197,248,0.15); --text: #E8F4FD; --muted: #6B8FAF;
+    --green: #00E5A0; --green-bg: rgba(0,229,160,0.08);
+    --red: #FF5C7A; --red-bg: rgba(255,92,122,0.08);
+    --yellow: #FFD166; --radius: 12px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image: linear-gradient(rgba(84,197,248,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(84,197,248,0.03) 1px,transparent 1px);
+    background-size:40px 40px; pointer-events:none; z-index:0;
+  }
+  .orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; }
+  .orb-1 { width:500px; height:500px; background:rgba(5,83,177,0.25); top:-150px; right:-100px; }
+  .orb-2 { width:400px; height:400px; background:rgba(0,210,255,0.12); bottom:100px; left:-100px; }
+
+  .wrapper { position:relative; z-index:1; max-width:760px; margin:0 auto; padding:40px 24px 80px; }
+
+  header { text-align:center; margin-bottom:56px; animation:fadeDown 0.7s ease both; }
+  .badge { display:inline-flex; align-items:center; gap:8px; background:rgba(84,197,248,0.1); border:1px solid rgba(84,197,248,0.25); border-radius:999px; padding:6px 16px; font-size:11px; font-family:'JetBrains Mono',monospace; letter-spacing:0.12em; color:var(--flutter-sky); text-transform:uppercase; margin-bottom:24px; }
+  .badge-dot { width:6px; height:6px; border-radius:50%; background:var(--flutter-sky); animation:pulse 2s infinite; }
+  h1 { font-size:clamp(28px,5vw,42px); font-weight:800; line-height:1.15; letter-spacing:-0.03em; background:linear-gradient(135deg,#fff 30%,var(--flutter-sky)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:12px; }
+  .subtitle { color:var(--muted); font-size:15px; font-weight:300; line-height:1.6; }
+
+  .progress-wrap { margin-bottom:48px; animation:fadeDown 0.7s 0.1s ease both; }
+  .progress-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:12px; font-family:'JetBrains Mono',monospace; color:var(--muted); }
+  .progress-meta span:last-child { color:var(--flutter-sky); }
+  .progress-track { height:3px; background:var(--surface2); border-radius:999px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--flutter-blue),var(--flutter-sky)); border-radius:999px; transition:width 0.5s cubic-bezier(0.4,0,0.2,1); width:0%; }
+
+  .question-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:36px; margin-bottom:16px; animation:fadeUp 0.5s ease both; position:relative; overflow:hidden; }
+  .question-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--flutter-blue),var(--flutter-sky),transparent); }
+
+  .q-number { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.15em; color:var(--flutter-sky); text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .q-number::after { content:''; flex:1; height:1px; background:var(--border); }
+  .q-text { font-size:17px; font-weight:600; line-height:1.55; color:var(--text); margin-bottom:28px; }
+
+  .q-code { background:#1E1E1E; border:1px solid rgba(84,197,248,0.1); border-radius:8px; padding:14px 18px; margin:-8px 0 20px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#D4D4D4; line-height:1.7; overflow-x:auto; }
+  .kw{color:#569CD6} .fn{color:#DCDCAA} .cm{color:#6A9955} .str{color:#CE9178} .ty{color:#4EC9B0}
+
+  .options { display:flex; flex-direction:column; gap:10px; }
+  .option { display:flex; align-items:flex-start; gap:14px; padding:16px 20px; background:var(--surface2); border:1px solid transparent; border-radius:var(--radius); cursor:pointer; transition:all 0.2s ease; text-align:left; width:100%; font-family:'Sora',sans-serif; color:var(--text); font-size:14px; line-height:1.5; }
+  .option:hover:not(:disabled) { border-color:rgba(84,197,248,0.3); background:rgba(84,197,248,0.05); transform:translateX(4px); }
+  .option:disabled { cursor:default; }
+  .option-letter { flex-shrink:0; width:28px; height:28px; border-radius:6px; background:rgba(84,197,248,0.1); border:1px solid rgba(84,197,248,0.2); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--flutter-sky); transition:all 0.2s ease; margin-top:1px; }
+  .option.correct { border-color:var(--green); background:var(--green-bg); }
+  .option.correct .option-letter { background:var(--green); border-color:var(--green); color:#000; }
+  .option.wrong { border-color:var(--red); background:var(--red-bg); opacity:0.7; }
+  .option.wrong .option-letter { background:var(--red); border-color:var(--red); color:#fff; }
+  .option.dimmed { opacity:0.35; }
+
+  .explanation { display:none; margin-top:20px; padding:16px 20px; background:rgba(255,209,102,0.07); border:1px solid rgba(255,209,102,0.2); border-radius:var(--radius); font-size:13px; line-height:1.65; color:#ccc; }
+  .explanation.show { display:block; animation:fadeUp 0.3s ease both; }
+  .explanation strong { color:var(--yellow); font-weight:600; display:block; margin-bottom:4px; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; }
+
+  .next-btn { display:none; margin-top:20px; width:100%; padding:16px; background:linear-gradient(135deg,var(--flutter-blue),#0870E0); border:none; border-radius:var(--radius); color:#fff; font-family:'Sora',sans-serif; font-size:14px; font-weight:600; cursor:pointer; letter-spacing:0.02em; transition:all 0.2s ease; }
+  .next-btn:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(5,83,177,0.4); }
+  .next-btn.show { display:block; animation:fadeUp 0.3s ease both; }
+
+  #results { display:none; text-align:center; animation:fadeUp 0.6s ease both; }
+  .score-ring { width:160px; height:160px; margin:0 auto 32px; position:relative; }
+  .score-ring svg { transform:rotate(-90deg); }
+  .score-ring circle { fill:none; stroke-width:8; stroke-linecap:round; }
+  .ring-bg { stroke:var(--surface2); }
+  .ring-fill { stroke:url(#sg); transition:stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+  .score-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .score-number { font-size:42px; font-weight:800; line-height:1; background:linear-gradient(135deg,#fff,var(--flutter-sky)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .score-denom { font-size:14px; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+  .result-title { font-size:26px; font-weight:800; letter-spacing:-0.02em; margin-bottom:10px; }
+  .result-msg { color:var(--muted); font-size:15px; line-height:1.6; margin-bottom:36px; }
+  .restart-btn { display:inline-flex; align-items:center; gap:10px; padding:14px 32px; background:transparent; border:1px solid rgba(84,197,248,0.3); border-radius:var(--radius); color:var(--flutter-sky); font-family:'Sora',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s ease; }
+  .restart-btn:hover { background:rgba(84,197,248,0.08); border-color:var(--flutter-sky); transform:translateY(-2px); }
+  .summary-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:32px 0; }
+  .summary-tile { aspect-ratio:1; border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; transition:transform 0.2s; }
+  .summary-tile:hover { transform:scale(1.1); }
+  .summary-tile.ok { background:var(--green-bg); border:1px solid var(--green); color:var(--green); }
+  .summary-tile.ko { background:var(--red-bg); border:1px solid var(--red); color:var(--red); }
+
+  /* ── Curve Visualizer ────────────────────────────────────────────── */
+  .curve-demo { background:var(--surface2); border:1px solid var(--border); border-radius:16px; padding:20px; margin:-8px 0 20px; }
+  .curve-demo-label { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; color:var(--muted); text-transform:uppercase; margin-bottom:16px; }
+  .curve-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  @media(max-width:520px){ .curve-grid { grid-template-columns:repeat(2,1fr); } }
+  .curve-card { background:var(--surface); border:1px solid rgba(84,197,248,0.1); border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s; text-align:center; }
+  .curve-card:hover { border-color:rgba(84,197,248,0.35); }
+  .curve-card.active { border-color:var(--flutter-sky); background:rgba(84,197,248,0.07); }
+  .curve-name { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--flutter-sky); margin-bottom:10px; }
+  .curve-track { height:6px; background:rgba(84,197,248,0.1); border-radius:999px; position:relative; overflow:visible; }
+  .curve-ball { width:14px; height:14px; border-radius:50%; background:var(--flutter-sky); position:absolute; top:50%; transform:translate(-50%,-50%); left:0%; box-shadow:0 0 8px rgba(84,197,248,0.6); }
+  .demo-tile-row { display:flex; gap:10px; align-items:center; justify-content:center; padding:10px 0; }
+  .demo-anim-tile { width:52px; height:52px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:16px; color:#fff; background:#374151; border:2px solid rgba(84,197,248,0.2); transition-property:background,transform,border-color; transition-duration:0.5s; }
+  .demo-anim-tile.revealed { background:#2D6A4F; border-color:#52B788; transform:scale(1.05); }
+  .demo-trigger-btn { padding:8px 18px; background:linear-gradient(135deg,var(--flutter-blue),#0870E0); border:none; border-radius:8px; color:#fff; font-family:'Sora',sans-serif; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+  .demo-trigger-btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(5,83,177,0.4); }
+
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:translateY(0)} }
+  @keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes shake    { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+  .shake { animation:shake 0.35s ease; }
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="wrapper">
+  <header>
+    <div class="badge"><span class="badge-dot"></span>IAM1 · Flutter — TP Final</div>
+    <h1>Animations<br>Implicites</h1>
+    <p class="subtitle">Quiz d'auto-évaluation · 5 questions · AnimatedContainer · Duration · Curves · Widgets Animated*</p>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-meta"><span>PROGRESSION</span><span id="progress-label">0 / 5</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+
+  <div id="quiz-container"></div>
+
+  <div id="results">
+    <div class="score-ring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#0553B1"/><stop offset="100%" stop-color="#54C5F8"/>
+        </linearGradient></defs>
+        <circle class="ring-bg" cx="80" cy="80" r="68"/>
+        <circle class="ring-fill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="ring-fill"/>
+      </svg>
+      <div class="score-label">
+        <span class="score-number" id="score-num">0</span>
+        <span class="score-denom">/ 5</span>
+      </div>
+    </div>
+    <h2 class="result-title" id="result-title"></h2>
+    <p class="result-msg" id="result-msg"></p>
+    <div class="summary-grid" id="summary-grid"></div>
+    <button class="restart-btn" onclick="restart()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+      Recommencer le quiz
+    </button>
+  </div>
+</div>
+
+<script>
+// ── Curve visualizer logic ─────────────────────────────────────────────────
+var curves = [
+  { name: 'linear',    css: 'linear',                          label: 'Curves.linear' },
+  { name: 'easeOut',   css: 'cubic-bezier(0.0, 0.0, 0.2, 1)', label: 'Curves.easeOut' },
+  { name: 'easeIn',    css: 'cubic-bezier(0.4, 0.0, 1.0, 1)', label: 'Curves.easeIn' },
+  { name: 'easeInOut', css: 'cubic-bezier(0.4, 0.0, 0.2, 1)', label: 'Curves.easeInOut' },
+  { name: 'bounceIn',  css: 'cubic-bezier(0.34, 1.56, 0.64, 1)', label: 'Curves.bounceIn' },
+  { name: 'decelerate',css: 'cubic-bezier(0.05, 0.7, 0.1, 1.0)', label: 'Curves.decelerate' },
+];
+
+var activeCurve = 1; // easeOut default
+var tileRevealed = false;
+var animating = false;
+
+function buildCurveDemo(container) {
+  var wrap = document.createElement('div');
+  wrap.className = 'curve-demo';
+  wrap.innerHTML = '<div class="curve-demo-label">🎨 Visualiseur de courbes interactif — cliquez une courbe puis lancez l\'animation</div>';
+
+  // Grid of curve cards
+  var grid = document.createElement('div');
+  grid.className = 'curve-grid';
+  curves.forEach(function(c, i) {
+    var card = document.createElement('div');
+    card.className = 'curve-card' + (i === activeCurve ? ' active' : '');
+    card.id = 'curve-card-' + i;
+    card.innerHTML = '<div class="curve-name">' + c.label.replace('Curves.','') + '</div>' +
+      '<div class="curve-track"><div class="curve-ball" id="ball-' + i + '"></div></div>';
+    card.onclick = (function(idx){ return function() { selectCurve(idx); }; })(i);
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+
+  // Tile demo row
+  var tileRow = document.createElement('div');
+  tileRow.className = 'demo-tile-row';
+  ['A','B','C','K','E'].forEach(function(l, i) {
+    var t = document.createElement('div');
+    t.className = 'demo-anim-tile';
+    t.id = 'dtile-' + i;
+    t.textContent = l;
+    tileRow.appendChild(t);
+  });
+  var btn = document.createElement('button');
+  btn.className = 'demo-trigger-btn';
+  btn.id = 'demo-anim-btn';
+  btn.textContent = '▶ Animer';
+  btn.onclick = triggerTileAnimation;
+  tileRow.appendChild(btn);
+  wrap.appendChild(tileRow);
+
+  container.appendChild(wrap);
+}
+
+function selectCurve(idx) {
+  activeCurve = idx;
+  curves.forEach(function(c, i) {
+    var card = document.getElementById('curve-card-' + i);
+    if (card) card.className = 'curve-card' + (i === idx ? ' active' : '');
+  });
+}
+
+function triggerTileAnimation() {
+  if (animating) return;
+  animating = true;
+  tileRevealed = !tileRevealed;
+  var css = curves[activeCurve].css;
+  var colors = ['#2D6A4F','#7B5E00','#374151','#7B5E00','#2D6A4F'];
+  var borders = ['#52B788','#F4A261','#6B7280','#F4A261','#52B788'];
+
+  for (var i = 0; i < 5; i++) {
+    var tile = document.getElementById('dtile-' + i);
+    if (!tile) continue;
+    tile.style.transitionTimingFunction = css;
+    tile.style.transitionDuration = '500ms';
+    if (tileRevealed) {
+      tile.style.background = colors[i];
+      tile.style.borderColor = borders[i];
+      tile.style.transform = 'scale(1.05)';
+      tile.style.color = '#fff';
+    } else {
+      tile.style.background = '#374151';
+      tile.style.borderColor = 'rgba(84,197,248,0.2)';
+      tile.style.transform = 'scale(1)';
+    }
+  }
+
+  // Animate ball along track for active curve
+  var ball = document.getElementById('ball-' + activeCurve);
+  if (ball) {
+    ball.style.transition = 'left 500ms ' + css;
+    ball.style.left = tileRevealed ? '100%' : '0%';
+  }
+
+  setTimeout(function() { animating = false; }, 600);
+}
+
+// ── Quiz data ──────────────────────────────────────────────────────────────
+var questions = [
+  {
+    q: "Quel widget permet d'animer automatiquement les changements de propriétés comme la couleur, la taille et la décoration ?",
+    code: [
+      "<span class='cm'>// Lequel anime automatiquement les changements ?</span>",
+      "<span class='ty'>Container</span>(",
+      "  color: _revealed ? <span class='ty'>Colors</span>.green : <span class='ty'>Colors</span>.white,",
+      "  <span class='cm'>// changement instantané ou animé ?</span>",
+      ")",
+    ],
+    options: [
+      "Container — en lui passant un paramètre animate: true.",
+      "AnimatedContainer — il anime automatiquement les changements entre deux builds.",
+      "AnimationController — il gère toutes les animations Flutter.",
+      "TransitionBuilder — il construit les transitions entre widgets.",
+    ],
+    correct: 1,
+    explanation: "AnimatedContainer est l'équivalent animé de Container. Quand ses propriétés changent entre deux builds, il interpole automatiquement les valeurs. Container n'a aucun mécanisme d'animation — les changements sont instantanés.",
+    demo: true,
+  },
+  {
+    q: "Quelle propriété est OBLIGATOIRE dans AnimatedContainer et absente d'un Container ordinaire ?",
+    code: [
+      "<span class='ty'>AnimatedContainer</span>(",
+      "  <span class='cm'>// ← quelle propriété est requise ici ?</span>",
+      "  height: <span class='cm'>60</span>,",
+      "  color: <span class='ty'>Colors</span>.green,",
+      "  child: <span class='ty'>Text</span>(<span class='str'>'A'</span>),",
+      ")",
+    ],
+    options: [
+      "curve — sans courbe, l'animation ne peut pas calculer sa progression.",
+      "duration — elle spécifie combien de temps dure la transition animée.",
+      "child — AnimatedContainer exige toujours un widget enfant.",
+      "color — sans couleur, il n'y a rien à animer.",
+    ],
+    correct: 1,
+    explanation: "duration est la seule propriété requise supplémentaire d'AnimatedContainer par rapport à Container. Sans elle, Flutter ne saurait pas en combien de temps effectuer la transition. curve est optionnel (défaut: Curves.linear).",
+  },
+  {
+    q: "Quelle courbe démarre rapidement puis ralentit vers la fin, donnant un sentiment de 'résolution naturelle' ?",
+    options: [
+      "Curves.linear — vitesse constante du début à la fin.",
+      "Curves.bounceIn — effet de rebond au démarrage de l'animation.",
+      "Curves.easeOut — démarre vite puis ralentit progressivement vers la valeur cible.",
+      "Curves.elasticIn — dépassement élastique puis retour à la valeur de départ.",
+    ],
+    correct: 2,
+    explanation: "Curves.easeOut commence l'animation rapidement et décélère vers la fin. Cet effet donne l'impression que l'objet 'arrive' à sa destination, créant une sensation naturelle et satisfaisante. C'est l'une des courbes les plus utilisées dans les interfaces Material Design.",
+  },
+  {
+    q: "Dans Birdle, qu'est-ce qui déclenche l'animation d'AnimatedContainer sur les tuiles ?",
+    code: [
+      "<span class='cm'>// Dans _GamePageState :</span>",
+      "<span class='fn'>setState</span>(() {",
+      "  _game.<span class='fn'>guess</span>(input);",
+      "});",
+      "<span class='cm'>// → Tile se reconstruit avec un nouveau hitType</span>",
+      "<span class='cm'>// → AnimatedContainer anime le changement de color</span>",
+    ],
+    options: [
+      "Un appel direct à une méthode startAnimation() sur le widget Tile.",
+      "La reconstruction du widget Tile causée par setState() dans GamePage, qui change la valeur de hitType.",
+      "Un Timer qui lance l'animation toutes les 500ms automatiquement.",
+      "L'événement onTap sur la tuile qui déclenche la transition de couleur.",
+    ],
+    correct: 1,
+    explanation: "AnimatedContainer n'a pas de méthode de déclenchement explicite. Il anime quand ses propriétés changent entre deux builds. Le déclencheur est setState() dans GamePage qui provoque la reconstruction de Tile avec un nouveau hitType — AnimatedContainer détecte le changement de color et anime la transition.",
+  },
+  {
+    q: "Quel widget implicite anime la transition quand son enfant (child) change de type ou de Key entre deux builds ?",
+    code: [
+      "<span class='cm'>// Afficher un bouton 'Rejouer' avec animation d'entrée :</span>",
+      "<span class='ty'>???</span>(",
+      "  duration: <span class='ty'>Duration</span>(milliseconds: <span class='cm'>400</span>),",
+      "  child: _game.isGameOver",
+      "    ? <span class='ty'>ElevatedButton</span>(key: <span class='ty'>ValueKey</span>(<span class='str'>'replay'</span>), ...)",
+      "    : <span class='ty'>SizedBox</span>.shrink(key: <span class='ty'>ValueKey</span>(<span class='str'>'empty'</span>)),",
+      ")",
+    ],
+    options: [
+      "AnimatedContainer — il peut remplacer n'importe quel widget par un autre.",
+      "AnimatedOpacity — il fait apparaître le bouton en augmentant son opacité.",
+      "AnimatedSwitcher — il anime la transition quand son widget enfant change de type ou de Key.",
+      "AnimatedCrossFade — il fait un fondu enchaîné entre deux widgets prédéfinis.",
+    ],
+    correct: 2,
+    explanation: "AnimatedSwitcher est conçu pour animer la transition quand son enfant (child) change. Quand Flutter détecte que le nouveau child est différent du précédent (type ou Key différente), il anime la sortie de l'ancien et l'entrée du nouveau. Les ValueKey sont indispensables pour qu'AnimatedSwitcher détecte le changement.",
+  },
+];
+
+var LETTERS = ['A','B','C','D'];
+var current = 0, score = 0, results = [];
+
+function render() {
+  var container = document.getElementById('quiz-container');
+  if (current >= questions.length) { showResults(); return; }
+  var q = questions[current];
+  container.innerHTML = '';
+
+  var card = document.createElement('div');
+  card.className = 'question-card';
+  var codeHtml = q.code ? '<div class="q-code">' + q.code.join('<br>') + '</div>' : '';
+  card.innerHTML =
+    '<div class="q-number">Question ' + (current+1) + ' sur ' + questions.length + '</div>' +
+    '<p class="q-text">' + q.q + '</p>' +
+    codeHtml +
+    (q.demo ? '<div id="demo-slot"></div>' : '') +
+    '<div class="options" id="options"></div>' +
+    '<div class="explanation" id="explanation"><strong>💡 Explication</strong>' + q.explanation + '</div>';
+  container.appendChild(card);
+
+  if (q.demo) buildCurveDemo(document.getElementById('demo-slot'));
+
+  var optionsEl = card.querySelector('#options');
+  q.options.forEach(function(opt, i) {
+    var btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerHTML = '<span class="option-letter">' + LETTERS[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = function() { handleAnswer(i); };
+    optionsEl.appendChild(btn);
+  });
+
+  var nextBtn = document.createElement('button');
+  nextBtn.className = 'next-btn';
+  nextBtn.id = 'next-btn';
+  nextBtn.textContent = current === questions.length-1 ? 'Voir les résultats →' : 'Question suivante →';
+  nextBtn.onclick = function() { current++; render(); updateProgress(); };
+  container.appendChild(nextBtn);
+  updateProgress();
+}
+
+function handleAnswer(chosen) {
+  var q = questions[current];
+  var options = document.querySelectorAll('.option');
+  options.forEach(function(b) { b.disabled = true; });
+  var isCorrect = chosen === q.correct;
+  if (isCorrect) score++;
+  results[current] = isCorrect;
+  options.forEach(function(btn, i) {
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === chosen && !isCorrect) { btn.classList.add('wrong'); btn.classList.add('shake'); }
+    else btn.classList.add('dimmed');
+  });
+  document.getElementById('explanation').classList.add('show');
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function updateProgress() {
+  document.getElementById('progress-fill').style.width = (current / questions.length * 100) + '%';
+  document.getElementById('progress-label').textContent = current + ' / ' + questions.length;
+}
+
+function showResults() {
+  document.getElementById('quiz-container').innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('score-num').textContent = score;
+  setTimeout(function() {
+    document.getElementById('ring-fill').style.strokeDashoffset = 427.26 - (score / questions.length) * 427.26;
+  }, 100);
+  var pct = score / questions.length;
+  var title, msg;
+  if (pct === 1) {
+    title = "Score parfait ! 🎉"; msg = "Maîtrise complète des animations implicites. Birdle est poli et professionnel — félicitations pour la fin de la séquence !";
+  } else if (pct >= 0.8) {
+    title = "Très bien ! 🚀"; msg = "Excellente compréhension d'AnimatedContainer, Duration et Curves. Revoyez les questions manquées.";
+  } else if (pct >= 0.6) {
+    title = "Pas mal ! 📚"; msg = "Bonne base. Pratiquez le remplacement Container → AnimatedContainer et testez les différentes Curves.";
+  } else {
+    title = "À retravailler 💪"; msg = "Relisez le cours sur les animations implicites, expérimentez le visualiseur de courbes, puis retentez.";
+  }
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-msg').textContent = msg;
+  var grid = document.getElementById('summary-grid');
+  grid.innerHTML = '';
+  results.forEach(function(ok, i) {
+    var tile = document.createElement('div');
+    tile.className = 'summary-tile ' + (ok ? 'ok' : 'ko');
+    tile.title = 'Question ' + (i+1) + ' : ' + (ok ? 'Correct' : 'Incorrect');
+    tile.textContent = 'Q' + (i+1);
+    grid.appendChild(tile);
+  });
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-label').textContent = '5 / 5';
+}
+
+function restart() {
+  current = 0; score = 0; results = [];
+  tileRevealed = false; activeCurve = 1;
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('ring-fill').style.strokeDashoffset = '427.26';
+  render(); updateProgress();
+}
+
+render();
+</script>
+</body>
+</html>
