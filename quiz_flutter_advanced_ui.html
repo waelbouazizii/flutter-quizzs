@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — UI Avancée Flutter · Cupertino</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cup:#006DFF;--cups:#5BA4FF;--cupbg:#E5F0FF;
+  --bg:#050D1A;--sf:#0C1829;--sf2:#112240;
+  --bd:rgba(91,164,255,0.15);--tx:#E8F4FD;--mt:#6B8FAF;
+  --gn:#00E5A0;--gnb:rgba(0,229,160,0.08);
+  --rd:#FF5C7A;--rdb:rgba(255,92,122,0.08);
+  --yw:#FFD166;--r:12px;
+}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(91,164,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(91,164,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:rgba(0,109,255,0.2);top:-150px;right:-100px}
+.orb2{width:400px;height:400px;background:rgba(91,164,255,0.1);bottom:100px;left:-100px}
+.wrap{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:40px 24px 80px}
+
+header{text-align:center;margin-bottom:52px;animation:fd .7s ease both}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(91,164,255,0.1);border:1px solid rgba(91,164,255,0.25);border-radius:999px;padding:6px 16px;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--cups);text-transform:uppercase;margin-bottom:20px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--cups);animation:pulse 2s infinite}
+h1{font-size:clamp(26px,5vw,40px);font-weight:800;line-height:1.15;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 30%,var(--cups));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.sub{color:var(--mt);font-size:14px;font-weight:300;line-height:1.6}
+
+.pgwrap{margin-bottom:44px}
+.pgmeta{display:flex;justify-content:space-between;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--mt);margin-bottom:8px}
+.pgmeta span:last-child{color:var(--cups)}
+.pgtrk{height:3px;background:var(--sf2);border-radius:999px;overflow:hidden}
+.pgfill{height:100%;background:linear-gradient(90deg,var(--cup),var(--cups));border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+
+/* Cupertino vs Material comparison widget */
+.compare-demo{background:var(--sf2);border:1px solid var(--bd);border-radius:14px;padding:20px;margin:-4px 0 20px}
+.compare-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:14px}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.compare-col{border-radius:10px;overflow:hidden}
+.compare-col-header{padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;text-align:center;letter-spacing:.08em}
+.material-col .compare-col-header{background:rgba(103,80,164,0.3);color:#CE93D8}
+.cupertino-col .compare-col-header{background:rgba(0,109,255,0.25);color:var(--cups)}
+.compare-items{padding:8px}
+.compare-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:4px;font-size:12px}
+.material-col .compare-item{background:rgba(103,80,164,0.08)}
+.cupertino-col .compare-item{background:rgba(0,109,255,0.08)}
+.ci-widget{font-family:'JetBrains Mono',monospace;font-size:11px;flex:1}
+.material-col .ci-widget{color:#CE93D8}
+.cupertino-col .ci-widget{color:var(--cups)}
+.ci-desc{font-size:10px;color:var(--mt)}
+
+/* ValueNotifier simulator */
+.vn-demo{background:var(--sf2);border:1px solid var(--bd);border-radius:14px;padding:20px;margin:-4px 0 20px}
+.vn-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:14px}
+.vn-state{background:var(--sf);border:1px solid rgba(91,164,255,0.15);border-radius:10px;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:12px;line-height:1.7}
+.vn-key{color:var(--cups)}
+.vn-val{color:#FFD166}
+.vn-str{color:#98C379}
+.vn-num{color:#D19A66}
+.vn-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.vn-btn{padding:7px 14px;border-radius:8px;border:1px solid rgba(91,164,255,0.3);background:transparent;color:var(--cups);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.vn-btn:hover{background:rgba(91,164,255,0.1)}
+.vn-log{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mt);min-height:20px}
+.vn-log.notify{color:var(--gn)}
+
+/* Card */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:34px;margin-bottom:16px;animation:fu .5s ease both;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cup),var(--cups),transparent)}
+.qnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--cups);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.qnum::after{content:'';flex:1;height:1px;background:var(--bd)}
+.qtxt{font-size:17px;font-weight:600;line-height:1.55;margin-bottom:24px}
+.qcode{background:#1E1E1E;border:1px solid rgba(91,164,255,0.1);border-radius:8px;padding:12px 16px;margin:-4px 0 18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#D4D4D4;line-height:1.7;overflow-x:auto}
+.kw{color:#569CD6}.fn{color:#DCDCAA}.cm{color:#6A9955}.str{color:#CE9178}.ty{color:#4EC9B0}
+
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:13px;padding:14px 18px;background:var(--sf2);border:1px solid transparent;border-radius:var(--r);cursor:pointer;transition:all .2s;text-align:left;width:100%;font-family:'Sora',sans-serif;color:var(--tx);font-size:14px;line-height:1.5}
+.opt:hover:not(:disabled){border-color:rgba(91,164,255,0.3);background:rgba(91,164,255,0.05);transform:translateX(4px)}
+.opt:disabled{cursor:default}
+.ol{flex-shrink:0;width:26px;height:26px;border-radius:6px;background:rgba(91,164,255,0.1);border:1px solid rgba(91,164,255,0.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--cups);margin-top:1px}
+.opt.correct{border-color:var(--gn);background:var(--gnb)}
+.opt.correct .ol{background:var(--gn);border-color:var(--gn);color:#000}
+.opt.wrong{border-color:var(--rd);background:var(--rdb);opacity:.7}
+.opt.wrong .ol{background:var(--rd);border-color:var(--rd);color:#fff}
+.opt.dimmed{opacity:.32}
+
+.expl{display:none;margin-top:18px;padding:14px 18px;background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-radius:var(--r);font-size:13px;line-height:1.65;color:#ccc}
+.expl.show{display:block;animation:fu .3s ease both}
+.expl strong{color:var(--yw);font-weight:600;display:block;margin-bottom:3px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.nbtn{display:none;margin-top:18px;width:100%;padding:15px;background:linear-gradient(135deg,var(--cup),#2B7FFF);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.nbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,109,255,0.4)}
+.nbtn.show{display:block;animation:fu .3s ease both}
+
+#results{display:none;text-align:center;animation:fu .6s ease both}
+.sring{width:160px;height:160px;margin:0 auto 28px;position:relative}
+.sring svg{transform:rotate(-90deg)}
+.sring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.rbg{stroke:var(--sf2)}
+.rfill{stroke:url(#sg);transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)}
+.slabel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.snum{font-size:42px;font-weight:800;line-height:1;background:linear-gradient(135deg,#fff,var(--cups));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sdenom{font-size:14px;color:var(--mt);font-family:'JetBrains Mono',monospace}
+.rtitle{font-size:24px;font-weight:800;margin-bottom:8px}
+.rmsg{color:var(--mt);font-size:14px;line-height:1.6;margin-bottom:32px}
+.rbtn{display:inline-flex;align-items:center;gap:10px;padding:13px 28px;background:transparent;border:1px solid rgba(91,164,255,0.3);border-radius:var(--r);color:var(--cups);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.rbtn:hover{background:rgba(91,164,255,0.08);transform:translateY(-2px)}
+.sgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:28px 0}
+.stile{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+.stile.ok{background:var(--gnb);border:1px solid var(--gn);color:var(--gn)}
+.stile.ko{background:var(--rdb);border:1px solid var(--rd);color:var(--rd)}
+
+@keyframes fd{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .35s ease}
+@media(max-width:520px){.card{padding:22px 18px}.qtxt{font-size:15px}.opt{font-size:13px}.compare-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="wrap">
+
+<header>
+  <div class="badge"><span class="dot"></span>IAM1 · Flutter UI 102</div>
+  <h1>UI Avancée<br>& Cupertino</h1>
+  <p class="sub">Quiz · 5 questions · CupertinoApp · ValueNotifier · Factory constructors · SplayTreeMap</p>
+</header>
+
+<div class="pgwrap">
+  <div class="pgmeta"><span>PROGRESSION</span><span id="pglbl">0 / 5</span></div>
+  <div class="pgtrk"><div class="pgfill" id="pgfill"></div></div>
+</div>
+
+<div id="qc"></div>
+
+<div id="results">
+  <div class="sring">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#006DFF"/><stop offset="100%" stop-color="#5BA4FF"/>
+      </linearGradient></defs>
+      <circle class="rbg" cx="80" cy="80" r="68"/>
+      <circle class="rfill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="rfill"/>
+    </svg>
+    <div class="slabel"><span class="snum" id="snum">0</span><span class="sdenom">/ 5</span></div>
+  </div>
+  <h2 class="rtitle" id="rtitle"></h2>
+  <p class="rmsg" id="rmsg"></p>
+  <div class="sgrid" id="sgrid"></div>
+  <button class="rbtn" onclick="restart()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+    Recommencer
+  </button>
+</div>
+</div>
+
+<script>
+// ── Compare widget (Q1) ────────────────────────────────────────
+function buildCompare(slot) {
+  var d = document.createElement('div');
+  d.className = 'compare-demo';
+  d.innerHTML = '<div class="compare-label">🎨 Comparaison interactive — Material vs Cupertino</div>' +
+    '<div class="compare-grid">' +
+      '<div class="compare-col material-col">' +
+        '<div class="compare-col-header">MaterialApp</div>' +
+        '<div class="compare-items">' +
+          '<div class="compare-item"><span class="ci-widget">MaterialApp</span><span class="ci-desc">Racine</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">Scaffold</span><span class="ci-desc">Structure page</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">AppBar</span><span class="ci-desc">Barre nav</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">ElevatedButton</span><span class="ci-desc">Bouton</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">TextField</span><span class="ci-desc">Champ texte</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">AlertDialog</span><span class="ci-desc">Alerte</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">ThemeData</span><span class="ci-desc">Theme</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="compare-col cupertino-col">' +
+        '<div class="compare-col-header">CupertinoApp</div>' +
+        '<div class="compare-items">' +
+          '<div class="compare-item"><span class="ci-widget">CupertinoApp</span><span class="ci-desc">Racine</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">CupertinoPageScaffold</span><span class="ci-desc">Structure page</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">CupertinoNavigationBar</span><span class="ci-desc">Barre nav</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">CupertinoButton</span><span class="ci-desc">Bouton</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">CupertinoTextField</span><span class="ci-desc">Champ texte</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">CupertinoAlertDialog</span><span class="ci-desc">Alerte</span></div>' +
+          '<div class="compare-item"><span class="ci-widget">CupertinoThemeData</span><span class="ci-desc">Theme</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  slot.appendChild(d);
+}
+
+// ── ValueNotifier simulator (Q3) ──────────────────────────────
+var vnGroups = [
+  { label: 'All iPhone', count: 51, permanent: true },
+  { label: 'Friends', count: 1, permanent: false },
+  { label: 'Work', count: 0, permanent: false },
+];
+var notifyCount = 0;
+
+function buildVNDemo(slot) {
+  var d = document.createElement('div');
+  d.className = 'vn-demo';
+  d.innerHTML = '<div class="vn-label">⚡ Simulateur ValueNotifier&lt;List&lt;ContactGroup&gt;&gt;</div>' +
+    '<div class="vn-state" id="vn-state"></div>' +
+    '<div class="vn-btns">' +
+      '<button class="vn-btn" onclick="vnAddFriend()">+ Ajouter contact à Friends</button>' +
+      '<button class="vn-btn" onclick="vnAddGroup()">+ Nouveau groupe</button>' +
+      '<button class="vn-btn" onclick="vnReset()">↺ Reset</button>' +
+    '</div>' +
+    '<div class="vn-log" id="vn-log">Prêt — cliquez un bouton pour modifier .value</div>';
+  slot.appendChild(d);
+  renderVN();
+}
+
+function renderVN() {
+  var el = document.getElementById('vn-state');
+  if (!el) return;
+  var lines = '<span class="vn-key">_listsNotifier</span>.value = [<br>';
+  vnGroups.forEach(function(g, i) {
+    lines += '&nbsp;&nbsp;ContactGroup(<br>';
+    lines += '&nbsp;&nbsp;&nbsp;&nbsp;<span class="vn-key">label</span>: <span class="vn-str">"' + g.label + '"</span>,<br>';
+    lines += '&nbsp;&nbsp;&nbsp;&nbsp;<span class="vn-key">contacts.length</span>: <span class="vn-num">' + g.count + '</span>,<br>';
+    lines += '&nbsp;&nbsp;&nbsp;&nbsp;<span class="vn-key">permanent</span>: <span class="vn-num">' + g.permanent + '</span><br>';
+    lines += '&nbsp;&nbsp;)' + (i < vnGroups.length - 1 ? ',' : '') + '<br>';
+  });
+  lines += ']';
+  el.innerHTML = lines;
+}
+
+function vnNotify(action) {
+  notifyCount++;
+  var log = document.getElementById('vn-log');
+  if (log) {
+    log.className = 'vn-log notify';
+    log.textContent = '→ ' + action + ' → .value = [...] → notifyListeners() #' + notifyCount + ' → ValueListenableBuilder reconstruit';
+    setTimeout(function() { if (log) log.className = 'vn-log'; }, 1500);
+  }
+}
+
+function vnAddFriend() {
+  var friends = vnGroups.find(function(g) { return g.label === 'Friends'; });
+  if (friends) { friends.count++; renderVN(); vnNotify('.value modifie'); }
+}
+
+function vnAddGroup() {
+  var idx = vnGroups.length;
+  vnGroups.push({ label: 'Groupe ' + idx, count: 0, permanent: false });
+  renderVN(); vnNotify('.value = nouvelle liste');
+}
+
+function vnReset() {
+  vnGroups = [
+    { label: 'All iPhone', count: 51, permanent: true },
+    { label: 'Friends', count: 1, permanent: false },
+    { label: 'Work', count: 0, permanent: false },
+  ];
+  notifyCount = 0;
+  renderVN();
+  var log = document.getElementById('vn-log');
+  if (log) { log.className = 'vn-log'; log.textContent = 'Reset — état initial restauré.'; }
+}
+
+// ── Quiz data ─────────────────────────────────────────────────
+var Qs = [
+  {
+    q: "Quelle est la principale différence entre CupertinoApp et MaterialApp ?",
+    compare: true,
+    options: [
+      "CupertinoApp ne fonctionne que sur les appareils iOS réels.",
+      "CupertinoApp est plus performant car il utilise moins de widgets.",
+      "CupertinoApp fournit des widgets iOS (Human Interface Guidelines), MaterialApp des widgets Material Design. Les deux tournent sur toutes les plateformes Flutter.",
+      "MaterialApp supporte le mode sombre, CupertinoApp non.",
+    ],
+    correct: 2,
+    expl: "CupertinoApp et MaterialApp peuvent tous deux tourner sur Android, iOS, Web et Desktop. La différence est uniquement visuelle : style iOS vs style Material Design. Les deux supportent le mode sombre via leurs systèmes de thème respectifs (CupertinoDynamicColor / ThemeData).",
+  },
+  {
+    q: "Que fait CupertinoDynamicColor.withBrightness(color: ..., darkColor: ...) ?",
+    code: [
+      "<span class='kw'>const</span> <span class='ty'>CupertinoThemeData</span>(",
+      "  barBackgroundColor: <span class='ty'>CupertinoDynamicColor</span>.withBrightness(",
+      "    color:     <span class='ty'>Color</span>(<span class='cm'>0xFFF9F9F9</span>), <span class='cm'>// mode clair</span>",
+      "    darkColor: <span class='ty'>Color</span>(<span class='cm'>0xFF1D1D1D</span>), <span class='cm'>// mode sombre</span>",
+      "  ),",
+      ")",
+    ],
+    options: [
+      "Il crée un dégradé entre deux couleurs selon la luminosité de l'écran.",
+      "Il retourne automatiquement color en mode clair et darkColor en mode sombre, sans code supplémentaire dans les widgets.",
+      "Il génère une couleur intermédiaire entre color et darkColor.",
+      "Il désactive le mode sombre pour les widgets Cupertino.",
+    ],
+    correct: 1,
+    expl: "CupertinoDynamicColor.withBrightness crée une couleur adaptative : color en mode clair, darkColor en mode sombre. Flutter détecte le mode système et applique automatiquement la bonne valeur partout où cette couleur est utilisée — sans ternaire ni MediaQuery dans les widgets.",
+  },
+  {
+    q: "Quelle est la différence fondamentale entre ValueNotifier<T> et ChangeNotifier ?",
+    vndemo: true,
+    options: [
+      "ValueNotifier ne peut pas être utilisé avec ListenableBuilder.",
+      "ChangeNotifier est plus récent et remplace ValueNotifier dans les nouvelles versions Flutter.",
+      "ValueNotifier encapsule une unique valeur T et notifie automatiquement quand .value change. ChangeNotifier gère un état multi-propriétés et nécessite notifyListeners() manuel.",
+      "ValueNotifier est plus lent car il crée une copie de la valeur à chaque changement.",
+    ],
+    correct: 2,
+    expl: "ValueNotifier<T> hérite de ChangeNotifier mais se spécialise dans une seule valeur via .value. Le setter déclenche notifyListeners() automatiquement. ChangeNotifier gère plusieurs propriétés mais nécessite des appels manuels à notifyListeners(). Les deux sont compatibles avec ListenableBuilder et ValueListenableBuilder.",
+  },
+  {
+    q: "Pourquoi ContactGroup utilise-t-il un factory constructor plutôt qu'un constructeur ordinaire ?",
+    code: [
+      "<span class='kw'>factory</span> <span class='ty'>ContactGroup</span>({",
+      "  <span class='kw'>required</span> <span class='ty'>int</span> id,",
+      "  <span class='kw'>required</span> <span class='ty'>String</span> label,",
+      "  <span class='ty'>List</span>&lt;<span class='ty'>Contact</span>&gt;? contacts,",
+      "}) {",
+      "  <span class='kw'>final</span> copy = contacts ?? &lt;<span class='ty'>Contact</span>&gt;[];",
+      "  <span class='fn'>_sortContacts</span>(copy); <span class='cm'>// logique avant création</span>",
+      "  <span class='kw'>return</span> <span class='ty'>ContactGroup</span>._internal(id: id, label: label, contacts: copy);",
+      "}",
+    ],
+    options: [
+      "Parce que les factory constructors sont plus rapides que les constructeurs normaux.",
+      "Pour permettre d'exécuter de la logique (tri des contacts) avant de créer l'instance, ce qu'un constructeur ordinaire ne peut pas faire facilement.",
+      "Parce que factory est obligatoire quand une classe a un constructeur privé.",
+      "Pour empêcher la création de plusieurs instances de ContactGroup (singleton).",
+    ],
+    correct: 1,
+    expl: "Un factory constructor peut exécuter du code arbitraire avant de retourner une instance — ici, trier la liste. Il délègue ensuite au constructeur privé _internal. Un constructeur ordinaire ne peut pas appeler de méthodes ou effectuer des traitements complexes avant l'initialisation des champs.",
+  },
+  {
+    q: "Pourquoi SplayTreeMap est-il préféré à une HashMap ordinaire pour alphabetizedContacts ?",
+    code: [
+      "<span class='kw'>typedef</span> <span class='ty'>AlphabetizedContactMap</span> = <span class='ty'>SplayTreeMap</span>&lt;<span class='ty'>String</span>, <span class='ty'>List</span>&lt;<span class='ty'>Contact</span>&gt;&gt;;",
+      "",
+      "<span class='cm'>// SplayTreeMap garantit les clés triées :</span>",
+      "<span class='cm'>// { 'A': [...], 'B': [...], 'C': [...], ..., 'Z': [...] }</span>",
+      "",
+      "<span class='cm'>// HashMap ordinaire : ordre non garanti</span>",
+      "<span class='cm'>// { 'Z': [...], 'A': [...], 'M': [...] } ← possible !</span>",
+    ],
+    options: [
+      "SplayTreeMap est plus rapide pour les opérations d'insertion et de lecture.",
+      "SplayTreeMap permet de stocker des listes comme valeurs, contrairement à Map.",
+      "SplayTreeMap maintient ses clés triées automatiquement, garantissant A → Z sans tri supplémentaire.",
+      "SplayTreeMap est la seule Map Dart compatible avec les widgets Cupertino.",
+    ],
+    correct: 2,
+    expl: "SplayTreeMap est une Map dont les clés sont toujours maintenues triées. Pour un index alphabétique, cela garantit que A apparaît avant B, B avant C, etc. — sans appeler .sort() sur les clés. Une HashMap n'a pas d'ordre garanti : les initiales pourraient apparaître dans n'importe quel ordre.",
+  },
+];
+
+var LETTERS = ['A','B','C','D'];
+var cur = 0, score = 0, results = [];
+
+function render() {
+  var c = document.getElementById('qc');
+  if (cur >= Qs.length) { showResults(); return; }
+  var q = Qs[cur];
+  c.innerHTML = '';
+  var card = document.createElement('div');
+  card.className = 'card';
+  var codeHtml = q.code ? '<div class="qcode">' + q.code.join('<br>') + '</div>' : '';
+  card.innerHTML =
+    '<div class="qnum">Question ' + (cur+1) + ' sur ' + Qs.length + '</div>' +
+    '<p class="qtxt">' + q.q + '</p>' +
+    (q.compare ? '<div id="compare-slot"></div>' : '') +
+    codeHtml +
+    (q.vndemo ? '<div id="vn-slot"></div>' : '') +
+    '<div class="opts" id="opts"></div>' +
+    '<div class="expl" id="expl"><strong>💡 Explication</strong>' + q.expl + '</div>';
+  c.appendChild(card);
+  if (q.compare) buildCompare(document.getElementById('compare-slot'));
+  if (q.vndemo) buildVNDemo(document.getElementById('vn-slot'));
+  var optsEl = card.querySelector('#opts');
+  q.options.forEach(function(opt, i) {
+    var btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.innerHTML = '<span class="ol">' + LETTERS[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = function() { handleAnswer(i); };
+    optsEl.appendChild(btn);
+  });
+  var nb = document.createElement('button');
+  nb.className = 'nbtn'; nb.id = 'nbtn';
+  nb.textContent = cur === Qs.length-1 ? 'Voir les résultats →' : 'Question suivante →';
+  nb.onclick = function() { cur++; render(); updatePg(); };
+  c.appendChild(nb);
+  updatePg();
+}
+
+function handleAnswer(chosen) {
+  var q = Qs[cur];
+  var opts = document.querySelectorAll('.opt');
+  opts.forEach(function(b) { b.disabled = true; });
+  var ok = chosen === q.correct;
+  if (ok) score++;
+  results[cur] = ok;
+  opts.forEach(function(b, i) {
+    if (i === q.correct) b.classList.add('correct');
+    else if (i === chosen && !ok) { b.classList.add('wrong'); b.classList.add('shake'); }
+    else b.classList.add('dimmed');
+  });
+  document.getElementById('expl').classList.add('show');
+  document.getElementById('nbtn').classList.add('show');
+}
+
+function updatePg() {
+  document.getElementById('pgfill').style.width = (cur / Qs.length * 100) + '%';
+  document.getElementById('pglbl').textContent = cur + ' / ' + Qs.length;
+}
+
+function showResults() {
+  document.getElementById('qc').innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('snum').textContent = score;
+  setTimeout(function() {
+    document.getElementById('rfill').style.strokeDashoffset = 427.26 - (score/Qs.length)*427.26;
+  }, 100);
+  var pct = score/Qs.length;
+  var t, m;
+  if (pct===1){t='Score parfait ! 🎉';m='Maîtrise complète de Cupertino, ValueNotifier et des modèles Dart. Prêt pour les layouts adaptatifs !';}
+  else if(pct>=.8){t='Très bien ! 🚀';m='Excellente compréhension du système Cupertino et des factory constructors. Revoyez les points manqués.';}
+  else if(pct>=.6){t='Bien ! 📚';m='Bonne base. Relisez le tableau MaterialApp vs CupertinoApp et la section ValueNotifier.';}
+  else{t='À retravailler 💪';m='Refaites les exercices Cupertino et ValueNotifier, puis retentez le quiz.';}
+  document.getElementById('rtitle').textContent = t;
+  document.getElementById('rmsg').textContent = m;
+  var g = document.getElementById('sgrid'); g.innerHTML = '';
+  results.forEach(function(ok, i) {
+    var tile = document.createElement('div');
+    tile.className = 'stile ' + (ok?'ok':'ko');
+    tile.title = 'Q'+(i+1)+' : '+(ok?'Correct':'Incorrect');
+    tile.textContent = 'Q'+(i+1);
+    g.appendChild(tile);
+  });
+  document.getElementById('pgfill').style.width = '100%';
+  document.getElementById('pglbl').textContent = '5 / 5';
+}
+
+function restart() {
+  cur=0;score=0;results=[];
+  vnGroups=[{label:'All iPhone',count:51,permanent:true},{label:'Friends',count:1,permanent:false},{label:'Work',count:0,permanent:false}];
+  notifyCount=0;
+  document.getElementById('results').style.display='none';
+  document.getElementById('rfill').style.strokeDashoffset='427.26';
+  render();updatePg();
+}
+render();
+</script>
+</body>
+</html>
