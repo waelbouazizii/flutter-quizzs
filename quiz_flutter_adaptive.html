@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Layouts Adaptatifs Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cup:#006DFF;--cups:#5BA4FF;--bg:#050D1A;--sf:#0C1829;--sf2:#112240;
+  --bd:rgba(91,164,255,0.15);--tx:#E8F4FD;--mt:#6B8FAF;
+  --gn:#00E5A0;--gnb:rgba(0,229,160,0.08);
+  --rd:#FF5C7A;--rdb:rgba(255,92,122,0.08);
+  --yw:#FFD166;--r:12px;
+}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(91,164,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(91,164,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:rgba(0,109,255,0.2);top:-150px;right:-100px}
+.orb2{width:400px;height:400px;background:rgba(91,164,255,0.1);bottom:100px;left:-100px}
+.wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:40px 24px 80px}
+
+header{text-align:center;margin-bottom:52px;animation:fd .7s ease both}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(91,164,255,0.1);border:1px solid rgba(91,164,255,0.25);border-radius:999px;padding:6px 16px;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--cups);text-transform:uppercase;margin-bottom:20px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--cups);animation:pulse 2s infinite}
+h1{font-size:clamp(26px,5vw,40px);font-weight:800;line-height:1.15;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 30%,var(--cups));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.sub{color:var(--mt);font-size:14px;font-weight:300;line-height:1.6}
+
+.pgwrap{margin-bottom:44px}
+.pgmeta{display:flex;justify-content:space-between;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--mt);margin-bottom:8px}
+.pgmeta span:last-child{color:var(--cups)}
+.pgtrk{height:3px;background:var(--sf2);border-radius:999px;overflow:hidden}
+.pgfill{height:100%;background:linear-gradient(90deg,var(--cup),var(--cups));border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+
+/* ── Adaptive layout simulator ──────────────────────────────── */
+.sim-wrap{background:var(--sf2);border:1px solid var(--bd);border-radius:16px;padding:20px;margin:-4px 0 20px}
+.sim-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:16px}
+.sim-controls{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.sim-slider{flex:1;min-width:180px;accent-color:var(--cups);height:6px;cursor:pointer}
+.sim-width-label{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;min-width:60px;text-align:right}
+.sim-width-label.small{color:var(--rd)}
+.sim-width-label.large{color:var(--gn)}
+.sim-screen{border:2px solid rgba(91,164,255,0.2);border-radius:10px;overflow:hidden;transition:all .3s ease;height:120px;position:relative;background:var(--sf)}
+.sim-phone-layout{display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:var(--mt);font-family:'JetBrains Mono',monospace}
+.sim-tablet-layout{display:flex;height:100%}
+.sim-sidebar{background:rgba(0,109,255,0.1);border-right:1px solid rgba(91,164,255,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--cups);font-family:'JetBrains Mono',monospace;flex-shrink:0;transition:width .3s ease}
+.sim-detail{flex:1;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--mt);font-family:'JetBrains Mono',monospace}
+.sim-divider{width:1px;background:rgba(91,164,255,0.25);flex-shrink:0}
+.sim-badge{position:absolute;top:8px;right:8px;padding:3px 10px;border-radius:999px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700}
+.sim-badge.phone{background:rgba(255,92,122,0.15);color:var(--rd);border:1px solid rgba(255,92,122,0.3)}
+.sim-badge.tablet{background:rgba(0,229,160,0.12);color:var(--gn);border:1px solid rgba(0,229,160,0.25)}
+.sim-code{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mt);transition:color .3s}
+.sim-code.active{color:var(--cups)}
+
+/* BoxConstraints visualizer */
+.bc-wrap{background:var(--sf2);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:-4px 0 20px}
+.bc-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:14px}
+.bc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.bc-item{background:var(--sf);border:1px solid rgba(91,164,255,0.12);border-radius:8px;padding:12px}
+.bc-prop{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cups);margin-bottom:4px}
+.bc-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--tx)}
+.bc-desc{font-size:11px;color:var(--mt);margin-top:4px}
+
+/* Card */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:34px;margin-bottom:16px;animation:fu .5s ease both;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cup),var(--cups),transparent)}
+.qnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--cups);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.qnum::after{content:'';flex:1;height:1px;background:var(--bd)}
+.qtxt{font-size:17px;font-weight:600;line-height:1.55;margin-bottom:24px}
+.qcode{background:#1E1E1E;border:1px solid rgba(91,164,255,0.1);border-radius:8px;padding:12px 16px;margin:-4px 0 18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#D4D4D4;line-height:1.7;overflow-x:auto}
+.kw{color:#569CD6}.fn{color:#DCDCAA}.cm{color:#6A9955}.str{color:#CE9178}.ty{color:#4EC9B0}.nm{color:#B5CEA8}
+
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:13px;padding:14px 18px;background:var(--sf2);border:1px solid transparent;border-radius:var(--r);cursor:pointer;transition:all .2s;text-align:left;width:100%;font-family:'Sora',sans-serif;color:var(--tx);font-size:14px;line-height:1.5}
+.opt:hover:not(:disabled){border-color:rgba(91,164,255,0.3);background:rgba(91,164,255,0.05);transform:translateX(4px)}
+.opt:disabled{cursor:default}
+.ol{flex-shrink:0;width:26px;height:26px;border-radius:6px;background:rgba(91,164,255,0.1);border:1px solid rgba(91,164,255,0.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--cups);margin-top:1px}
+.opt.correct{border-color:var(--gn);background:var(--gnb)}
+.opt.correct .ol{background:var(--gn);border-color:var(--gn);color:#000}
+.opt.wrong{border-color:var(--rd);background:var(--rdb);opacity:.7}
+.opt.wrong .ol{background:var(--rd);border-color:var(--rd);color:#fff}
+.opt.dimmed{opacity:.32}
+
+.expl{display:none;margin-top:18px;padding:14px 18px;background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-radius:var(--r);font-size:13px;line-height:1.65;color:#ccc}
+.expl.show{display:block;animation:fu .3s ease both}
+.expl strong{color:var(--yw);font-weight:600;display:block;margin-bottom:3px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.nbtn{display:none;margin-top:18px;width:100%;padding:15px;background:linear-gradient(135deg,var(--cup),#2B7FFF);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.nbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,109,255,0.4)}
+.nbtn.show{display:block;animation:fu .3s ease both}
+
+#results{display:none;text-align:center;animation:fu .6s ease both}
+.sring{width:160px;height:160px;margin:0 auto 28px;position:relative}
+.sring svg{transform:rotate(-90deg)}
+.sring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.rbg{stroke:var(--sf2)}.rfill{stroke:url(#sg);transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)}
+.slabel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.snum{font-size:42px;font-weight:800;line-height:1;background:linear-gradient(135deg,#fff,var(--cups));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sdenom{font-size:14px;color:var(--mt);font-family:'JetBrains Mono',monospace}
+.rtitle{font-size:24px;font-weight:800;margin-bottom:8px}
+.rmsg{color:var(--mt);font-size:14px;line-height:1.6;margin-bottom:32px}
+.rbtn{display:inline-flex;align-items:center;gap:10px;padding:13px 28px;background:transparent;border:1px solid rgba(91,164,255,0.3);border-radius:var(--r);color:var(--cups);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.rbtn:hover{background:rgba(91,164,255,0.08);transform:translateY(-2px)}
+.sgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:28px 0}
+.stile{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+.stile.ok{background:var(--gnb);border:1px solid var(--gn);color:var(--gn)}
+.stile.ko{background:var(--rdb);border:1px solid var(--rd);color:var(--rd)}
+
+@keyframes fd{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .35s ease}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="wrap">
+
+<header>
+  <div class="badge"><span class="dot"></span>IAM1 · Flutter UI 102</div>
+  <h1>Layouts Adaptatifs<br>& LayoutBuilder</h1>
+  <p class="sub">Quiz · 5 questions · LayoutBuilder · BoxConstraints · Breakpoints · Sidebar & Detail · Rolodex</p>
+</header>
+
+<div class="pgwrap">
+  <div class="pgmeta"><span>PROGRESSION</span><span id="pglbl">0 / 5</span></div>
+  <div class="pgtrk"><div class="pgfill" id="pgfill"></div></div>
+</div>
+
+<div id="qc"></div>
+
+<div id="results">
+  <div class="sring">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#006DFF"/><stop offset="100%" stop-color="#5BA4FF"/>
+      </linearGradient></defs>
+      <circle class="rbg" cx="80" cy="80" r="68"/>
+      <circle class="rfill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="rfill"/>
+    </svg>
+    <div class="slabel"><span class="snum" id="snum">0</span><span class="sdenom">/ 5</span></div>
+  </div>
+  <h2 class="rtitle" id="rtitle"></h2>
+  <p class="rmsg" id="rmsg"></p>
+  <div class="sgrid" id="sgrid"></div>
+  <button class="rbtn" onclick="restart()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+    Recommencer
+  </button>
+</div>
+</div>
+
+<script>
+var BREAKPOINT = 600;
+
+// ── Adaptive layout simulator ─────────────────────────────────
+function buildSim(slot) {
+  var d = document.createElement('div');
+  d.className = 'sim-wrap';
+  d.innerHTML =
+    '<div class="sim-label">📱 Simulateur de layout adaptatif — glissez pour changer la largeur</div>' +
+    '<div class="sim-controls">' +
+      '<input class="sim-slider" id="sim-slider" type="range" min="300" max="900" value="450" step="10"/>' +
+      '<span class="sim-width-label small" id="sim-width-lbl">450 px</span>' +
+    '</div>' +
+    '<div class="sim-screen" id="sim-screen"></div>' +
+    '<div class="sim-code" id="sim-code">constraints.maxWidth = 450 px → ContactGroupsPage()</div>';
+  slot.appendChild(d);
+  updateSim(450);
+  document.getElementById('sim-slider').addEventListener('input', function() {
+    updateSim(parseInt(this.value));
+  });
+}
+
+function updateSim(w) {
+  var lbl = document.getElementById('sim-width-lbl');
+  var screen = document.getElementById('sim-screen');
+  var codeEl = document.getElementById('sim-code');
+  var isLarge = w > BREAKPOINT;
+  if (lbl) {
+    lbl.textContent = w + ' px';
+    lbl.className = 'sim-width-label ' + (isLarge ? 'large' : 'small');
+  }
+  if (!screen) return;
+  if (isLarge) {
+    var sidebarW = Math.round(320 * Math.min(1, w / 700));
+    screen.innerHTML =
+      '<div class="sim-tablet-layout">' +
+        '<div class="sim-sidebar" style="width:' + sidebarW + 'px">SizedBox<br>w=' + sidebarW + 'px</div>' +
+        '<div class="sim-divider"></div>' +
+        '<div class="sim-detail">Expanded<br>(reste: ' + (w - sidebarW - 1) + 'px)</div>' +
+      '</div>' +
+      '<span class="sim-badge tablet">Large screen</span>';
+    if (codeEl) { codeEl.className = 'sim-code active'; codeEl.textContent = 'constraints.maxWidth = ' + w + ' px > ' + BREAKPOINT + ' → _buildLargeScreenLayout()'; }
+  } else {
+    screen.innerHTML =
+      '<div class="sim-phone-layout">ContactGroupsPage() — mode telephone</div>' +
+      '<span class="sim-badge phone">Small screen</span>';
+    if (codeEl) { codeEl.className = 'sim-code'; codeEl.textContent = 'constraints.maxWidth = ' + w + ' px ≤ ' + BREAKPOINT + ' → ContactGroupsPage()'; }
+  }
+}
+
+// ── BoxConstraints visualizer ─────────────────────────────────
+function buildBC(slot) {
+  var d = document.createElement('div');
+  d.className = 'bc-wrap';
+  d.innerHTML =
+    '<div class="bc-label">📐 BoxConstraints — propriétés disponibles dans builder(context, constraints)</div>' +
+    '<div class="bc-grid">' +
+      '<div class="bc-item"><div class="bc-prop">constraints.maxWidth</div><div class="bc-val" id="bc-mw">768.0</div><div class="bc-desc">Largeur max disponible</div></div>' +
+      '<div class="bc-item"><div class="bc-prop">constraints.maxHeight</div><div class="bc-val">∞</div><div class="bc-desc">Hauteur max (souvent infinie)</div></div>' +
+      '<div class="bc-item"><div class="bc-prop">constraints.minWidth</div><div class="bc-val">0.0</div><div class="bc-desc">Largeur min (souvent 0)</div></div>' +
+      '<div class="bc-item"><div class="bc-prop">constraints.minHeight</div><div class="bc-val">0.0</div><div class="bc-desc">Hauteur min (souvent 0)</div></div>' +
+    '</div>' +
+    '<div style="font-size:12px;color:var(--mt);font-family:JetBrains Mono,monospace">' +
+      'constraints.maxWidth > 600 → <span style="color:var(--gn)">true</span> → layout tablette/desktop' +
+    '</div>';
+  slot.appendChild(d);
+}
+
+// ── Quiz data ─────────────────────────────────────────────────
+var Qs = [
+  {
+    q: "Quelle information LayoutBuilder fournit-il à son builder callback ?",
+    sim: true,
+    options: [
+      "La taille totale de l'écran physique de l'appareil.",
+      "Les contraintes de taille imposées par le widget parent (maxWidth, maxHeight, minWidth, minHeight).",
+      "Les couleurs et la typographie du thème actuel.",
+      "Le nombre de widgets enfants dans l'arbre de widgets.",
+    ],
+    correct: 1,
+    expl: "LayoutBuilder passe un objet BoxConstraints à son builder. Ces contraintes reflètent l'espace disponible pour CE widget dans son contexte — pas l'écran complet. C'est pourquoi LayoutBuilder est plus précis que MediaQuery pour les décisions de layout dans un sous-arbre.",
+  },
+  {
+    q: "Pourquoi LayoutBuilder est-il préférable à MediaQuery pour décider entre layouts ?",
+    code: [
+      "<span class='cm'>// MediaQuery : taille TOTALE de l'écran</span>",
+      "<span class='kw'>final</span> screenWidth = <span class='ty'>MediaQuery</span>.of(context).size.width; <span class='cm'>// ex: 400</span>",
+      "",
+      "<span class='cm'>// LayoutBuilder : espace DISPONIBLE pour ce widget</span>",
+      "<span class='ty'>LayoutBuilder</span>(",
+      "  builder: (context, constraints) {",
+      "    <span class='cm'>// si Padding(all:20) autour → constraints.maxWidth = 360 (pas 400)</span>",
+      "    <span class='kw'>final</span> available = constraints.maxWidth; <span class='cm'>// ex: 360</span>",
+      "  }",
+      ")",
+    ],
+    options: [
+      "LayoutBuilder est plus rapide car il ne lit pas les métadonnées du système.",
+      "LayoutBuilder donne l'espace disponible pour le widget dans son contexte précis, pas la taille écran totale — plus robuste si le widget est dans un Padding ou une Column.",
+      "MediaQuery ne fonctionne pas avec les applications Cupertino.",
+      "LayoutBuilder met en cache les contraintes pour de meilleures performances.",
+    ],
+    correct: 1,
+    expl: "MediaQuery.of(context).size.width retourne la largeur totale de l'écran physique. LayoutBuilder retourne la largeur disponible après les contraintes de tous les ancêtres. Si le widget est dans Padding(all:20) sur un écran de 400 px, LayoutBuilder retourne 360 tandis que MediaQuery retourne 400.",
+  },
+  {
+    q: "Dans le layout grand écran de Rolodex, pourquoi le panneau detail utilise-t-il Expanded plutôt que SizedBox ?",
+    bc: true,
+    code: [
+      "<span class='ty'>Row</span>(",
+      "  children: [",
+      "    <span class='ty'>SizedBox</span>(width: <span class='nm'>320</span>, child: <span class='ty'>ContactGroupsPage</span>()),  <span class='cm'>// fixe</span>",
+      "    <span class='ty'>Container</span>(width: <span class='nm'>1</span>, color: <span class='ty'>CupertinoColors</span>.separator),  <span class='cm'>// fixe</span>",
+      "    <span class='ty'>Expanded</span>(child: <span class='ty'>ContactListsPage</span>(listId: selectedListId)), <span class='cm'>// ???</span>",
+      "  ],",
+      ")",
+    ],
+    options: [
+      "Expanded est obligatoire dans une Row — SizedBox n'y est pas autorisé.",
+      "Expanded est plus rapide que SizedBox pour les grands contenus.",
+      "Expanded prend tout l'espace restant après les autres enfants, sans jamais déborder quelle que soit la largeur de l'écran.",
+      "SizedBox ne peut pas contenir des widgets Cupertino.",
+    ],
+    correct: 2,
+    expl: "Expanded distribue l'espace restant dans la Row après que les autres enfants (SizedBox 320px + Container 1px = 321px) ont pris leur place. Le panneau detail s'adapte automatiquement à toutes les largeurs d'écran. Un SizedBox fixe aurait débordé sur les petits écrans ou laissé un espace vide sur les grands.",
+  },
+  {
+    q: "Pourquoi AdaptiveLayout est-il un StatefulWidget alors que ContactGroupsPage et ContactListsPage sont stateless ?",
+    code: [
+      "<span class='kw'>class</span> _AdaptiveLayoutState <span class='kw'>extends</span> <span class='ty'>State</span>&lt;<span class='ty'>AdaptiveLayout</span>&gt; {",
+      "  <span class='kw'>int</span> selectedListId = <span class='nm'>0</span>; <span class='cm'>// état partagé</span>",
+      "",
+      "  <span class='kw'>void</span> <span class='fn'>_onContactListSelected</span>(<span class='kw'>int</span> listId) {",
+      "    <span class='fn'>setState</span>(() { selectedListId = listId; });",
+      "  }",
+      "",
+      "  <span class='cm'>// selectedListId partagé entre sidebar ET panneau detail</span>",
+      "}",
+    ],
+    options: [
+      "LayoutBuilder ne peut être utilisé qu'à l'intérieur d'un StatefulWidget.",
+      "AdaptiveLayout gère selectedListId — état partagé entre la sidebar et le panneau detail. Quand l'utilisateur sélectionne un groupe, les deux panneaux doivent se mettre à jour.",
+      "Les widgets Cupertino nécessitent un State pour gérer le thème.",
+      "StatelessWidget ne peut pas contenir d'autres StatelessWidgets.",
+    ],
+    correct: 1,
+    expl: "selectedListId doit être partagé entre ContactGroupsPage (sidebar — sélectionne) et ContactListsPage (detail — affiche). C'est le principe 'lifting state up' : l'état monte au plus proche ancêtre commun. AdaptiveLayout est cet ancêtre. ContactGroupsPage et ContactListsPage n'ont pas d'état propre.",
+  },
+  {
+    q: "Quelle est la valeur du breakpoint largeScreenMinWidth dans Rolodex, et pourquoi ce seuil ?",
+    options: [
+      "400 px — seuil entre téléphone compact et téléphone large.",
+      "768 px — largeur minimale standard des tablettes iPad.",
+      "600 px — seuil recommandé par Material Design entre téléphone portrait et tablette/desktop.",
+      "1024 px — seuil entre tablette et desktop.",
+    ],
+    correct: 2,
+    expl: "600 px est le breakpoint le plus utilisé en Flutter responsive. En dessous : la plupart des téléphones en portrait. Au-dessus : tablettes, téléphones en paysage, et desktops. C'est la convention Material Design — rien n'empêche de l'ajuster. Dans Rolodex : const largeScreenMinWidth = 600.0;",
+  },
+];
+
+var LETTERS = ['A','B','C','D'];
+var cur = 0, score = 0, results = [];
+
+function render() {
+  var c = document.getElementById('qc');
+  if (cur >= Qs.length) { showResults(); return; }
+  var q = Qs[cur];
+  c.innerHTML = '';
+  var card = document.createElement('div');
+  card.className = 'card';
+  var codeHtml = q.code ? '<div class="qcode">' + q.code.join('<br>') + '</div>' : '';
+  card.innerHTML =
+    '<div class="qnum">Question ' + (cur+1) + ' sur ' + Qs.length + '</div>' +
+    '<p class="qtxt">' + q.q + '</p>' +
+    (q.sim ? '<div id="sim-slot"></div>' : '') +
+    codeHtml +
+    (q.bc ? '<div id="bc-slot"></div>' : '') +
+    '<div class="opts" id="opts"></div>' +
+    '<div class="expl" id="expl"><strong>💡 Explication</strong>' + q.expl + '</div>';
+  c.appendChild(card);
+  if (q.sim) buildSim(document.getElementById('sim-slot'));
+  if (q.bc) buildBC(document.getElementById('bc-slot'));
+  var optsEl = card.querySelector('#opts');
+  q.options.forEach(function(opt, i) {
+    var btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.innerHTML = '<span class="ol">' + LETTERS[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = function() { handleAnswer(i); };
+    optsEl.appendChild(btn);
+  });
+  var nb = document.createElement('button');
+  nb.className = 'nbtn'; nb.id = 'nbtn';
+  nb.textContent = cur === Qs.length-1 ? 'Voir les résultats →' : 'Question suivante →';
+  nb.onclick = function() { cur++; render(); updatePg(); };
+  c.appendChild(nb);
+  updatePg();
+}
+
+function handleAnswer(chosen) {
+  var q = Qs[cur];
+  var opts = document.querySelectorAll('.opt');
+  opts.forEach(function(b) { b.disabled = true; });
+  var ok = chosen === q.correct;
+  if (ok) score++;
+  results[cur] = ok;
+  opts.forEach(function(b, i) {
+    if (i === q.correct) b.classList.add('correct');
+    else if (i === chosen && !ok) { b.classList.add('wrong'); b.classList.add('shake'); }
+    else b.classList.add('dimmed');
+  });
+  document.getElementById('expl').classList.add('show');
+  document.getElementById('nbtn').classList.add('show');
+}
+
+function updatePg() {
+  document.getElementById('pgfill').style.width = (cur/Qs.length*100) + '%';
+  document.getElementById('pglbl').textContent = cur + ' / ' + Qs.length;
+}
+
+function showResults() {
+  document.getElementById('qc').innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('snum').textContent = score;
+  setTimeout(function() {
+    document.getElementById('rfill').style.strokeDashoffset = 427.26 - (score/Qs.length)*427.26;
+  }, 100);
+  var pct = score/Qs.length;
+  var t, m;
+  if(pct===1){t='Score parfait ! 🎉';m='Maîtrise totale de LayoutBuilder et des layouts adaptatifs. Prêt pour les slivers !';}
+  else if(pct>=.8){t='Très bien ! 🚀';m='Excellente compréhension de BoxConstraints et du pattern sidebar/detail. Revoyez les points manqués.';}
+  else if(pct>=.6){t='Bien ! 📚';m='Bonne base. Relisez la différence LayoutBuilder vs MediaQuery et le rôle d\'Expanded.';}
+  else{t='À retravailler 💪';m='Refaites les exercices sur LayoutBuilder et BoxConstraints, puis retentez le quiz.';}
+  document.getElementById('rtitle').textContent = t;
+  document.getElementById('rmsg').textContent = m;
+  var g = document.getElementById('sgrid'); g.innerHTML = '';
+  results.forEach(function(ok, i) {
+    var tile = document.createElement('div');
+    tile.className = 'stile ' + (ok?'ok':'ko');
+    tile.title = 'Q'+(i+1)+' : '+(ok?'Correct':'Incorrect');
+    tile.textContent = 'Q'+(i+1);
+    g.appendChild(tile);
+  });
+  document.getElementById('pgfill').style.width = '100%';
+  document.getElementById('pglbl').textContent = '5 / 5';
+}
+
+function restart() {
+  cur=0;score=0;results=[];
+  document.getElementById('results').style.display='none';
+  document.getElementById('rfill').style.strokeDashoffset='427.26';
+  render();updatePg();
+}
+render();
+</script>
+</body>
+</html>
