@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Navigation par Pile Flutter · Rolodex Final</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cup:#006DFF;--cups:#5BA4FF;--bg:#050D1A;--sf:#0C1829;--sf2:#112240;
+  --bd:rgba(91,164,255,0.15);--tx:#E8F4FD;--mt:#6B8FAF;
+  --gn:#00E5A0;--gnb:rgba(0,229,160,0.08);
+  --rd:#FF5C7A;--rdb:rgba(255,92,122,0.08);
+  --yw:#FFD166;--r:12px;
+}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(91,164,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(91,164,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:rgba(0,109,255,0.2);top:-150px;right:-100px}
+.orb2{width:400px;height:400px;background:rgba(91,164,255,0.1);bottom:100px;left:-100px}
+.wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:40px 24px 80px}
+
+header{text-align:center;margin-bottom:52px;animation:fd .7s ease both}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(91,164,255,0.1);border:1px solid rgba(91,164,255,0.25);border-radius:999px;padding:6px 16px;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--cups);text-transform:uppercase;margin-bottom:20px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--cups);animation:pulse 2s infinite}
+h1{font-size:clamp(26px,5vw,40px);font-weight:800;line-height:1.15;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 30%,var(--cups));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.sub{color:var(--mt);font-size:14px;font-weight:300;line-height:1.6}
+
+.pgwrap{margin-bottom:44px}
+.pgmeta{display:flex;justify-content:space-between;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--mt);margin-bottom:8px}
+.pgmeta span:last-child{color:var(--cups)}
+.pgtrk{height:3px;background:var(--sf2);border-radius:999px;overflow:hidden}
+.pgfill{height:100%;background:linear-gradient(90deg,var(--cup),var(--cups));border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+
+/* ── Navigator stack simulator ──────────────────────────────── */
+.nav-sim{background:var(--sf2);border:1px solid var(--bd);border-radius:16px;padding:20px;margin:-4px 0 20px}
+.nav-sim-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:16px}
+.nav-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.nav-btn{padding:8px 16px;border-radius:8px;border:none;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.push-btn{background:linear-gradient(135deg,var(--cup),#2B7FFF);color:#fff}
+.push-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,109,255,0.4)}
+.pop-btn{background:rgba(255,92,122,0.15);border:1px solid rgba(255,92,122,0.3);color:var(--rd)}
+.pop-btn:hover{background:rgba(255,92,122,0.25)}
+.pop-btn:disabled{opacity:.3;cursor:default;transform:none}
+.stack-display{display:flex;flex-direction:column-reverse;gap:6px;min-height:80px}
+.stack-frame{padding:10px 16px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;display:flex;align-items:center;justify-content:space-between;animation:slideIn .25s ease both}
+.stack-frame.top{background:linear-gradient(135deg,rgba(0,109,255,0.2),rgba(91,164,255,0.1));border:1px solid rgba(91,164,255,0.4);color:var(--cups)}
+.stack-frame.under{background:rgba(91,164,255,0.05);border:1px solid rgba(91,164,255,0.1);color:var(--mt)}
+.stack-tag{font-size:10px;padding:2px 8px;border-radius:4px}
+.stack-tag.current{background:var(--cup);color:#fff}
+.stack-tag.bg{background:rgba(91,164,255,0.1);color:var(--mt)}
+.nav-code{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mt);transition:color .3s}
+.nav-code.active{color:var(--gn)}
+
+/* ── Adaptive comparison ────────────────────────────────────── */
+.adapt-compare{background:var(--sf2);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:-4px 0 20px}
+.adapt-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:14px}
+.adapt-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.adapt-col{border-radius:10px;overflow:hidden}
+.adapt-col-header{padding:10px 14px;font-weight:700;font-size:12px;text-align:center;letter-spacing:.05em}
+.phone-h{background:rgba(255,92,122,0.2);color:var(--rd)}
+.tablet-h{background:rgba(0,229,160,0.15);color:var(--gn)}
+.adapt-items{padding:8px;background:var(--sf)}
+.adapt-item{padding:8px 10px;border-radius:6px;margin-bottom:6px;font-size:11px;line-height:1.5}
+.phone-item{background:rgba(255,92,122,0.06);border-left:2px solid var(--rd)}
+.tablet-item{background:rgba(0,229,160,0.06);border-left:2px solid var(--gn)}
+.adapt-item span{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:2px;opacity:.7}
+
+/* Card */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:34px;margin-bottom:16px;animation:fu .5s ease both;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cup),var(--cups),transparent)}
+.qnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--cups);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.qnum::after{content:'';flex:1;height:1px;background:var(--bd)}
+.qtxt{font-size:17px;font-weight:600;line-height:1.55;margin-bottom:24px}
+.qcode{background:#1E1E1E;border:1px solid rgba(91,164,255,0.1);border-radius:8px;padding:12px 16px;margin:-4px 0 18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#D4D4D4;line-height:1.7;overflow-x:auto}
+.kw{color:#569CD6}.fn{color:#DCDCAA}.cm{color:#6A9955}.str{color:#CE9178}.ty{color:#4EC9B0}
+
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:13px;padding:14px 18px;background:var(--sf2);border:1px solid transparent;border-radius:var(--r);cursor:pointer;transition:all .2s;text-align:left;width:100%;font-family:'Sora',sans-serif;color:var(--tx);font-size:14px;line-height:1.5}
+.opt:hover:not(:disabled){border-color:rgba(91,164,255,0.3);background:rgba(91,164,255,0.05);transform:translateX(4px)}
+.opt:disabled{cursor:default}
+.ol{flex-shrink:0;width:26px;height:26px;border-radius:6px;background:rgba(91,164,255,0.1);border:1px solid rgba(91,164,255,0.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--cups);margin-top:1px}
+.opt.correct{border-color:var(--gn);background:var(--gnb)}
+.opt.correct .ol{background:var(--gn);border-color:var(--gn);color:#000}
+.opt.wrong{border-color:var(--rd);background:var(--rdb);opacity:.7}
+.opt.wrong .ol{background:var(--rd);border-color:var(--rd);color:#fff}
+.opt.dimmed{opacity:.32}
+
+.expl{display:none;margin-top:18px;padding:14px 18px;background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-radius:var(--r);font-size:13px;line-height:1.65;color:#ccc}
+.expl.show{display:block;animation:fu .3s ease both}
+.expl strong{color:var(--yw);font-weight:600;display:block;margin-bottom:3px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.nbtn{display:none;margin-top:18px;width:100%;padding:15px;background:linear-gradient(135deg,var(--cup),#2B7FFF);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.nbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,109,255,0.4)}
+.nbtn.show{display:block;animation:fu .3s ease both}
+
+#results{display:none;text-align:center;animation:fu .6s ease both}
+.sring{width:160px;height:160px;margin:0 auto 28px;position:relative}
+.sring svg{transform:rotate(-90deg)}
+.sring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.rbg{stroke:var(--sf2)}.rfill{stroke:url(#sg);transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)}
+.slabel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.snum{font-size:42px;font-weight:800;line-height:1;background:linear-gradient(135deg,#fff,var(--cups));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sdenom{font-size:14px;color:var(--mt);font-family:'JetBrains Mono',monospace}
+.rtitle{font-size:24px;font-weight:800;margin-bottom:8px}
+.rmsg{color:var(--mt);font-size:14px;line-height:1.6;margin-bottom:32px}
+.rbtn{display:inline-flex;align-items:center;gap:10px;padding:13px 28px;background:transparent;border:1px solid rgba(91,164,255,0.3);border-radius:var(--r);color:var(--cups);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.rbtn:hover{background:rgba(91,164,255,0.08);transform:translateY(-2px)}
+.sgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:28px 0}
+.stile{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+.stile.ok{background:var(--gnb);border:1px solid var(--gn);color:var(--gn)}
+.stile.ko{background:var(--rdb);border:1px solid var(--rd);color:var(--rd)}
+
+/* Completion banner */
+.completion-banner{background:linear-gradient(135deg,rgba(0,109,255,0.15),rgba(0,229,160,0.08));border:1px solid rgba(91,164,255,0.3);border-radius:16px;padding:24px;text-align:center;margin:0 0 24px}
+.completion-title{font-size:18px;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,#fff,var(--gn));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.completion-sub{font-size:13px;color:var(--mt);line-height:1.6}
+
+@keyframes fd{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .35s ease}
+@media(max-width:520px){.card{padding:22px 18px}.qtxt{font-size:15px}.adapt-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="wrap">
+
+<header>
+  <div class="badge"><span class="dot"></span>IAM1 · Flutter UI 102 — TP Final</div>
+  <h1>Navigation<br>par Pile</h1>
+  <p class="sub">Quiz · 5 questions · Navigator.push/pop · CupertinoPageRoute · Master-Detail · Rolodex Complete</p>
+</header>
+
+<div class="completion-banner">
+  <div class="completion-title">🎉 TP 16 — Dernier TP du cursus Flutter UI 102</div>
+  <div class="completion-sub">Vous avez parcouru 16 TPs couvrant widgets, layout, state management, HTTP, Cupertino, animations, slivers et navigation. L'application Rolodex est complete !</div>
+</div>
+
+<div class="pgwrap">
+  <div class="pgmeta"><span>PROGRESSION</span><span id="pglbl">0 / 5</span></div>
+  <div class="pgtrk"><div class="pgfill" id="pgfill"></div></div>
+</div>
+
+<div id="qc"></div>
+
+<div id="results">
+  <div class="sring">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#006DFF"/><stop offset="100%" stop-color="#5BA4FF"/>
+      </linearGradient></defs>
+      <circle class="rbg" cx="80" cy="80" r="68"/>
+      <circle class="rfill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="rfill"/>
+    </svg>
+    <div class="slabel"><span class="snum" id="snum">0</span><span class="sdenom">/ 5</span></div>
+  </div>
+  <h2 class="rtitle" id="rtitle"></h2>
+  <p class="rmsg" id="rmsg"></p>
+  <div class="sgrid" id="sgrid"></div>
+  <button class="rbtn" onclick="restart()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+    Recommencer
+  </button>
+</div>
+</div>
+
+<script>
+// ── Navigator stack simulator ─────────────────────────────────
+var navStack = ['ContactGroupsPage'];
+var SCREENS = ['ContactGroupsPage','ContactListsPage (All iPhone)','ContactListsPage (Friends)'];
+var pushIdx = 0;
+
+function buildNavSim(slot) {
+  var d = document.createElement('div');
+  d.className = 'nav-sim';
+  d.innerHTML =
+    '<div class="nav-sim-label">📚 Simulateur de pile Navigator — push et pop interactifs</div>' +
+    '<div class="nav-btns">' +
+      '<button class="nav-btn push-btn" onclick="navPush()">Navigator.push() →</button>' +
+      '<button class="nav-btn pop-btn" id="pop-btn" onclick="navPop()">← Navigator.pop()</button>' +
+    '</div>' +
+    '<div class="stack-display" id="nav-stack"></div>' +
+    '<div class="nav-code" id="nav-code">Pile initiale : [ContactGroupsPage]</div>';
+  slot.appendChild(d);
+  renderNavStack();
+}
+
+function renderNavStack() {
+  var container = document.getElementById('nav-stack');
+  var popBtn = document.getElementById('pop-btn');
+  var codeEl = document.getElementById('nav-code');
+  if (!container) return;
+  container.innerHTML = '';
+  navStack.forEach(function(screen, i) {
+    var isTop = i === navStack.length - 1;
+    var div = document.createElement('div');
+    div.className = 'stack-frame ' + (isTop ? 'top' : 'under');
+    div.innerHTML = screen + '<span class="stack-tag ' + (isTop ? 'current' : 'bg') + '">' + (isTop ? 'ACTUEL' : 'en dessous') + '</span>';
+    container.appendChild(div);
+  });
+  if (popBtn) popBtn.disabled = navStack.length <= 1;
+  if (codeEl) {
+    var top = navStack[navStack.length-1];
+    codeEl.className = 'nav-code active';
+    codeEl.textContent = 'Pile [' + navStack.map(function(s,i){ return i===navStack.length-1?'▶'+s:s; }).join(' | ') + ']';
+  }
+}
+
+function navPush() {
+  if (navStack.length >= 4) return;
+  pushIdx = (pushIdx + 1) % (SCREENS.length - 1) + 1;
+  navStack.push(SCREENS[pushIdx] || 'ContactListsPage');
+  renderNavStack();
+}
+
+function navPop() {
+  if (navStack.length <= 1) return;
+  navStack.pop();
+  renderNavStack();
+}
+
+// ── Adaptive comparison ──────────────────────────────────────
+function buildAdaptCompare(slot) {
+  var d = document.createElement('div');
+  d.className = 'adapt-compare';
+  d.innerHTML =
+    '<div class="adapt-label">📱 Navigation adaptative — telephone vs tablette</div>' +
+    '<div class="adapt-grid">' +
+      '<div class="adapt-col">' +
+        '<div class="adapt-col-header phone-h">📱 Téléphone (&lt;600px)</div>' +
+        '<div class="adapt-items">' +
+          '<div class="adapt-item phone-item">ContactGroupsPage<span>callback → Navigator.push()</span></div>' +
+          '<div class="adapt-item phone-item">ContactListsPage<span>automaticallyImplyLeading: true → bouton retour ✓</span></div>' +
+          '<div class="adapt-item phone-item">Swipe depuis le bord gauche<span>→ Navigator.pop() automatique</span></div>' +
+          '<div class="adapt-item phone-item">Un seul écran visible à la fois<span>navigation séquentielle</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="adapt-col">' +
+        '<div class="adapt-col-header tablet-h">🖥 Tablette/Desktop (&gt;600px)</div>' +
+        '<div class="adapt-items">' +
+          '<div class="adapt-item tablet-item">ContactGroupsSidebar<span>callback → setState(selectedListId)</span></div>' +
+          '<div class="adapt-item tablet-item">ContactListDetail<span>automaticallyImplyLeading: false → pas de bouton retour</span></div>' +
+          '<div class="adapt-item tablet-item">Pas de navigation stack<span>sélection = mise à jour du panneau</span></div>' +
+          '<div class="adapt-item tablet-item">Deux panneaux simultanés<span>master-detail pattern</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  slot.appendChild(d);
+}
+
+// ── Quiz data ─────────────────────────────────────────────────
+var Qs = [
+  {
+    q: "Que fait Navigator.of(context).push(route) ?",
+    navsim: true,
+    options: [
+      "Remplace l'écran actuel par le nouvel écran (l'écran actuel est détruit).",
+      "Ajoute une nouvelle route au sommet de la pile de navigation et l'affiche à l'écran.",
+      "Retire la route actuelle de la pile et affiche l'écran précédent.",
+      "Ouvre une boîte de dialogue par-dessus l'écran actuel.",
+    ],
+    correct: 1,
+    expl: "Navigator.push ajoute une route au sommet de la pile — l'écran actuel reste en mémoire sous la nouvelle route. L'utilisateur peut revenir via pop(). pushReplacement remplace l'écran actuel. showDialog/showCupertinoDialog ouvre une boîte de dialogue sans changer la pile.",
+  },
+  {
+    q: "Quels sont les avantages spécifiques de CupertinoPageRoute par rapport à MaterialPageRoute ?",
+    code: [
+      "<span class='ty'>Navigator</span>.of(context).push(",
+      "  <span class='ty'>CupertinoPageRoute</span>(  <span class='cm'>// vs MaterialPageRoute</span>",
+      "    title: list.title,",
+      "    builder: (context) => <span class='ty'>ContactListsPage</span>(listId: list.id),",
+      "  ),",
+      ");",
+    ],
+    options: [
+      "CupertinoPageRoute est plus rapide car il utilise moins de ressources GPU.",
+      "CupertinoPageRoute fournit transition slide-from-right, bouton retour auto, swipe-to-go-back et gestion du titre — natifs au style iOS.",
+      "CupertinoPageRoute est le seul type de route compatible avec CupertinoApp.",
+      "CupertinoPageRoute supporte les écrans multi-fenêtre contrairement à MaterialPageRoute.",
+    ],
+    correct: 1,
+    expl: "CupertinoPageRoute reproduit iOS natif : glissement depuis la droite, bouton retour '< titre' automatique, swipe-to-go-back depuis le bord gauche. MaterialPageRoute utilise fade+scale style Material Design. Les deux fonctionnent sur toutes les plateformes — c'est un choix visuel.",
+  },
+  {
+    q: "Pourquoi automaticallyImplyLeading est-il false dans ContactListDetail (grand écran) ?",
+    adapt: true,
+    options: [
+      "Parce que les écrans larges n'ont pas assez de place pour afficher un bouton retour.",
+      "Parce que sur grand écran, la sélection est gérée par la sidebar et il n'y a pas de pile de navigation — le bouton retour n'aurait aucune action.",
+      "Parce que CupertinoSliverNavigationBar ne supporte pas le bouton retour sur tablette.",
+      "Pour des raisons de performance — le bouton retour consomme des ressources.",
+    ],
+    correct: 1,
+    expl: "Sur téléphone, ContactListsPage est poussée via Navigator.push — une pile de navigation existe, et '< Lists' permet de dépiler. Sur tablette, ContactListDetail est un simple widget dans un Row — il n'y a pas de pile, donc le bouton retour n'aurait aucune route vers laquelle retourner.",
+  },
+  {
+    q: "Quelle est la différence fondamentale entre ContactGroupsPage et ContactGroupsSidebar ?",
+    code: [
+      "<span class='cm'>// Téléphone :</span>",
+      "<span class='kw'>class</span> <span class='ty'>ContactGroupsPage</span> <span class='kw'>extends</span> <span class='ty'>StatelessWidget</span> {",
+      "  <span class='kw'>return</span> _ContactGroupsView(",
+      "    onListSelected: (list) => <span class='ty'>Navigator</span>.of(context).push(...),",
+      "  );",
+      "}",
+      "",
+      "<span class='cm'>// Tablette :</span>",
+      "<span class='kw'>class</span> <span class='ty'>ContactGroupsSidebar</span> <span class='kw'>extends</span> <span class='ty'>StatelessWidget</span> {",
+      "  <span class='kw'>return</span> _ContactGroupsView(",
+      "    onListSelected: (list) => onListSelected(list.id), <span class='cm'>// callback</span>",
+      "  );",
+      "}",
+    ],
+    options: [
+      "ContactGroupsSidebar est plus efficace car elle n'utilise pas de StatefulWidget.",
+      "ContactGroupsPage affiche plus de groupes que ContactGroupsSidebar.",
+      "ContactGroupsPage déclenche Navigator.push au tap (navigation), ContactGroupsSidebar déclenche un callback qui met à jour selectedListId dans AdaptiveLayout (pas de navigation).",
+      "ContactGroupsSidebar supporte le mode sombre, ContactGroupsPage non.",
+    ],
+    correct: 2,
+    expl: "Les deux utilisent _ContactGroupsView et la même UI. La seule différence est le callback onListSelected : ContactGroupsPage navigue (push), ContactGroupsSidebar met à jour le panneau detail (callback). Le code UI est partagé via _ContactGroupsView — zéro duplication.",
+  },
+  {
+    q: "Que se passe-t-il quand l'utilisateur redimensionne la fenêtre de 700px à 400px alors qu'il navigue dans la pile (mode téléphone) ?",
+    options: [
+      "L'application plante car la pile de navigation est incompatible avec le layout téléphone.",
+      "LayoutBuilder détecte le changement, bascule vers ContactGroupsPage, et la pile de navigation existante est abandonnée — l'utilisateur revient à l'écran initial.",
+      "L'écran reste en mode tablette jusqu'au prochain démarrage de l'application.",
+      "Flutter affiche une erreur : 'Cannot switch layout while navigating'.",
+    ],
+    correct: 1,
+    expl: "Quand la largeur passe sous 600px, LayoutBuilder reconstruit avec ContactGroupsPage. La pile Navigator existante n'est pas préservée — l'utilisateur se retrouve sur ContactGroupsPage. C'est un comportement normal. Une app de production gérerait cette transition plus finement (ex: avec go_router qui supporte les navigations adaptatives).",
+  },
+];
+
+var LETTERS = ['A','B','C','D'];
+var cur = 0, score = 0, results = [];
+
+function render() {
+  var c = document.getElementById('qc');
+  if (cur >= Qs.length) { showResults(); return; }
+  var q = Qs[cur];
+  c.innerHTML = '';
+  var card = document.createElement('div');
+  card.className = 'card';
+  var codeHtml = q.code ? '<div class="qcode">' + q.code.join('<br>') + '</div>' : '';
+  card.innerHTML =
+    '<div class="qnum">Question ' + (cur+1) + ' sur ' + Qs.length + '</div>' +
+    '<p class="qtxt">' + q.q + '</p>' +
+    (q.navsim ? '<div id="navsim-slot"></div>' : '') +
+    codeHtml +
+    (q.adapt ? '<div id="adapt-slot"></div>' : '') +
+    '<div class="opts" id="opts"></div>' +
+    '<div class="expl" id="expl"><strong>💡 Explication</strong>' + q.expl + '</div>';
+  c.appendChild(card);
+  if (q.navsim) buildNavSim(document.getElementById('navsim-slot'));
+  if (q.adapt) buildAdaptCompare(document.getElementById('adapt-slot'));
+  var optsEl = card.querySelector('#opts');
+  q.options.forEach(function(opt, i) {
+    var btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.innerHTML = '<span class="ol">' + LETTERS[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = function() { handleAnswer(i); };
+    optsEl.appendChild(btn);
+  });
+  var nb = document.createElement('button');
+  nb.className = 'nbtn'; nb.id = 'nbtn';
+  nb.textContent = cur === Qs.length-1 ? 'Voir les résultats →' : 'Question suivante →';
+  nb.onclick = function() { cur++; render(); updatePg(); };
+  c.appendChild(nb);
+  updatePg();
+}
+
+function handleAnswer(chosen) {
+  var q = Qs[cur];
+  var opts = document.querySelectorAll('.opt');
+  opts.forEach(function(b) { b.disabled = true; });
+  var ok = chosen === q.correct;
+  if (ok) score++;
+  results[cur] = ok;
+  opts.forEach(function(b, i) {
+    if (i === q.correct) b.classList.add('correct');
+    else if (i === chosen && !ok) { b.classList.add('wrong'); b.classList.add('shake'); }
+    else b.classList.add('dimmed');
+  });
+  document.getElementById('expl').classList.add('show');
+  document.getElementById('nbtn').classList.add('show');
+}
+
+function updatePg() {
+  document.getElementById('pgfill').style.width = (cur/Qs.length*100) + '%';
+  document.getElementById('pglbl').textContent = cur + ' / ' + Qs.length;
+}
+
+function showResults() {
+  document.getElementById('qc').innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('snum').textContent = score;
+  setTimeout(function() {
+    document.getElementById('rfill').style.strokeDashoffset = 427.26 - (score/Qs.length)*427.26;
+  }, 100);
+  var pct = score/Qs.length;
+  var t, m;
+  if(pct===1){t='Score parfait ! 🎉 Cursus terminé !';m='Maîtrise complète de la navigation Flutter. Vous avez terminé le cursus Flutter UI 102 — félicitations !';}
+  else if(pct>=.8){t='Très bien ! 🚀';m='Excellente compréhension de Navigator, CupertinoPageRoute et du pattern master-detail. Cursus presque terminé !';}
+  else if(pct>=.6){t='Bien ! 📚';m='Bonne base. Relisez la différence push/pop et les deux patterns de navigation adaptative.';}
+  else{t='À retravailler 💪';m='Refaites les exercices Navigator.push et le pattern master-detail, puis retentez le quiz.';}
+  document.getElementById('rtitle').textContent = t;
+  document.getElementById('rmsg').textContent = m;
+  var g = document.getElementById('sgrid'); g.innerHTML = '';
+  results.forEach(function(ok, i) {
+    var tile = document.createElement('div');
+    tile.className = 'stile ' + (ok?'ok':'ko');
+    tile.title = 'Q'+(i+1)+' : '+(ok?'Correct':'Incorrect');
+    tile.textContent = 'Q'+(i+1);
+    g.appendChild(tile);
+  });
+  document.getElementById('pgfill').style.width = '100%';
+  document.getElementById('pglbl').textContent = '5 / 5';
+}
+
+function restart() {
+  cur=0;score=0;results=[];
+  navStack=['ContactGroupsPage'];pushIdx=0;
+  document.getElementById('results').style.display='none';
+  document.getElementById('rfill').style.strokeDashoffset='427.26';
+  render();updatePg();
+}
+render();
+</script>
+</body>
+</html>
