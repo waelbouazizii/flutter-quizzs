@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Slivers & Scrolling Avancé Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cup:#006DFF;--cups:#5BA4FF;--bg:#050D1A;--sf:#0C1829;--sf2:#112240;
+  --bd:rgba(91,164,255,0.15);--tx:#E8F4FD;--mt:#6B8FAF;
+  --gn:#00E5A0;--gnb:rgba(0,229,160,0.08);
+  --rd:#FF5C7A;--rdb:rgba(255,92,122,0.08);
+  --yw:#FFD166;--r:12px;
+}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(91,164,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(91,164,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:rgba(0,109,255,0.2);top:-150px;right:-100px}
+.orb2{width:380px;height:380px;background:rgba(91,164,255,0.1);bottom:80px;left:-80px}
+.wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:40px 24px 80px}
+
+header{text-align:center;margin-bottom:52px;animation:fd .7s ease both}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(91,164,255,0.1);border:1px solid rgba(91,164,255,0.25);border-radius:999px;padding:6px 16px;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--cups);text-transform:uppercase;margin-bottom:20px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--cups);animation:pulse 2s infinite}
+h1{font-size:clamp(26px,5vw,40px);font-weight:800;line-height:1.15;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 30%,var(--cups));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.sub{color:var(--mt);font-size:14px;font-weight:300;line-height:1.6}
+
+.pgwrap{margin-bottom:44px}
+.pgmeta{display:flex;justify-content:space-between;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--mt);margin-bottom:8px}
+.pgmeta span:last-child{color:var(--cups)}
+.pgtrk{height:3px;background:var(--sf2);border-radius:999px;overflow:hidden}
+.pgfill{height:100%;background:linear-gradient(90deg,var(--cup),var(--cups));border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+
+/* ── Sliver scroll simulator ─────────────────────────────────── */
+.scroll-sim{background:var(--sf2);border:1px solid var(--bd);border-radius:16px;padding:20px;margin:-4px 0 20px;user-select:none}
+.scroll-sim-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:16px}
+.scroll-sim-controls{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.scroll-slider{flex:1;min-width:160px;accent-color:var(--cups);cursor:pointer}
+.scroll-pos-label{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cups);min-width:100px;text-align:right}
+.phone-frame{width:220px;height:340px;border:2px solid rgba(91,164,255,0.3);border-radius:20px;overflow:hidden;background:var(--sf);margin:0 auto;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+.nav-bar{position:absolute;top:0;left:0;right:0;z-index:10;transition:all .35s cubic-bezier(.4,0,.2,1);overflow:hidden;background:rgba(12,24,41,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(91,164,255,0.12)}
+.large-title{font-weight:800;color:#fff;transition:all .35s ease;transform-origin:top left;white-space:nowrap;padding:0 16px}
+.search-bar{background:rgba(91,164,255,0.08);border-radius:8px;margin:0 12px;padding:6px 12px;font-size:11px;color:var(--mt);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:6px;transition:all .35s ease;overflow:hidden}
+.compact-title{font-weight:600;color:#fff;text-align:center;padding:0 16px;transition:all .35s ease;overflow:hidden}
+.scroll-content{position:absolute;left:0;right:0;transition:top .35s cubic-bezier(.4,0,.2,1)}
+.alpha-section{padding:0 12px 0 12px}
+.alpha-letter{font-size:11px;font-weight:700;color:var(--mt);padding:10px 0 4px}
+.contact-row{padding:8px 0;border-bottom:1px solid rgba(91,164,255,0.08);font-size:11px;color:var(--tx);font-family:'JetBrains Mono',monospace}
+.contact-row:last-child{border-bottom:none}
+.sim-state-label{text-align:center;margin-top:10px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--mt);transition:color .3s}
+
+/* ── Sliver taxonomy ─────────────────────────────────────────── */
+.sliver-taxonomy{background:var(--sf2);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:-4px 0 20px}
+.sliver-tax-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:14px}
+.sliver-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sliver-card{background:var(--sf);border-radius:10px;padding:12px;border:1px solid rgba(91,164,255,0.1)}
+.sliver-card.highlight{border-color:rgba(0,229,160,0.35);background:rgba(0,229,160,0.05)}
+.sliver-card.adapter{border-color:rgba(255,209,102,0.35);background:rgba(255,209,102,0.05)}
+.sc-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-bottom:4px}
+.sc-name.sliver-color{color:var(--cups)}
+.sc-name.widget-color{color:var(--gn)}
+.sc-name.adapter-color{color:var(--yw)}
+.sc-desc{font-size:11px;color:var(--mt);line-height:1.5}
+.sliver-divider{grid-column:1/-1;text-align:center;font-size:11px;color:var(--mt);font-family:'JetBrains Mono',monospace;padding:6px 0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);margin:2px 0}
+
+/* Card */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:34px;margin-bottom:16px;animation:fu .5s ease both;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cup),var(--cups),transparent)}
+.qnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--cups);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.qnum::after{content:'';flex:1;height:1px;background:var(--bd)}
+.qtxt{font-size:17px;font-weight:600;line-height:1.55;margin-bottom:24px}
+.qcode{background:#1E1E1E;border:1px solid rgba(91,164,255,0.1);border-radius:8px;padding:12px 16px;margin:-4px 0 18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#D4D4D4;line-height:1.7;overflow-x:auto}
+.kw{color:#569CD6}.fn{color:#DCDCAA}.cm{color:#6A9955}.str{color:#CE9178}.ty{color:#4EC9B0}
+
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:13px;padding:14px 18px;background:var(--sf2);border:1px solid transparent;border-radius:var(--r);cursor:pointer;transition:all .2s;text-align:left;width:100%;font-family:'Sora',sans-serif;color:var(--tx);font-size:14px;line-height:1.5}
+.opt:hover:not(:disabled){border-color:rgba(91,164,255,0.3);background:rgba(91,164,255,0.05);transform:translateX(4px)}
+.opt:disabled{cursor:default}
+.ol{flex-shrink:0;width:26px;height:26px;border-radius:6px;background:rgba(91,164,255,0.1);border:1px solid rgba(91,164,255,0.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--cups);margin-top:1px}
+.opt.correct{border-color:var(--gn);background:var(--gnb)}
+.opt.correct .ol{background:var(--gn);border-color:var(--gn);color:#000}
+.opt.wrong{border-color:var(--rd);background:var(--rdb);opacity:.7}
+.opt.wrong .ol{background:var(--rd);border-color:var(--rd);color:#fff}
+.opt.dimmed{opacity:.32}
+
+.expl{display:none;margin-top:18px;padding:14px 18px;background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-radius:var(--r);font-size:13px;line-height:1.65;color:#ccc}
+.expl.show{display:block;animation:fu .3s ease both}
+.expl strong{color:var(--yw);font-weight:600;display:block;margin-bottom:3px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.nbtn{display:none;margin-top:18px;width:100%;padding:15px;background:linear-gradient(135deg,var(--cup),#2B7FFF);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.nbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,109,255,0.4)}
+.nbtn.show{display:block;animation:fu .3s ease both}
+
+#results{display:none;text-align:center;animation:fu .6s ease both}
+.sring{width:160px;height:160px;margin:0 auto 28px;position:relative}
+.sring svg{transform:rotate(-90deg)}
+.sring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.rbg{stroke:var(--sf2)}.rfill{stroke:url(#sg);transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)}
+.slabel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.snum{font-size:42px;font-weight:800;line-height:1;background:linear-gradient(135deg,#fff,var(--cups));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sdenom{font-size:14px;color:var(--mt);font-family:'JetBrains Mono',monospace}
+.rtitle{font-size:24px;font-weight:800;margin-bottom:8px}
+.rmsg{color:var(--mt);font-size:14px;line-height:1.6;margin-bottom:32px}
+.rbtn{display:inline-flex;align-items:center;gap:10px;padding:13px 28px;background:transparent;border:1px solid rgba(91,164,255,0.3);border-radius:var(--r);color:var(--cups);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.rbtn:hover{background:rgba(91,164,255,0.08);transform:translateY(-2px)}
+.sgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:28px 0}
+.stile{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+.stile.ok{background:var(--gnb);border:1px solid var(--gn);color:var(--gn)}
+.stile.ko{background:var(--rdb);border:1px solid var(--rd);color:var(--rd)}
+
+@keyframes fd{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .35s ease}
+@media(max-width:520px){.card{padding:22px 18px}.qtxt{font-size:15px}.sliver-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="wrap">
+
+<header>
+  <div class="badge"><span class="dot"></span>IAM1 · Flutter UI 102</div>
+  <h1>Slivers &<br>Scrolling Avancé</h1>
+  <p class="sub">Quiz · 5 questions · CustomScrollView · CupertinoSliverNavigationBar · SliverList · Sections alphabétiques</p>
+</header>
+
+<div class="pgwrap">
+  <div class="pgmeta"><span>PROGRESSION</span><span id="pglbl">0 / 5</span></div>
+  <div class="pgtrk"><div class="pgfill" id="pgfill"></div></div>
+</div>
+
+<div id="qc"></div>
+
+<div id="results">
+  <div class="sring">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#006DFF"/><stop offset="100%" stop-color="#5BA4FF"/>
+      </linearGradient></defs>
+      <circle class="rbg" cx="80" cy="80" r="68"/>
+      <circle class="rfill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="rfill"/>
+    </svg>
+    <div class="slabel"><span class="snum" id="snum">0</span><span class="sdenom">/ 5</span></div>
+  </div>
+  <h2 class="rtitle" id="rtitle"></h2>
+  <p class="rmsg" id="rmsg"></p>
+  <div class="sgrid" id="sgrid"></div>
+  <button class="rbtn" onclick="restart()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+    Recommencer
+  </button>
+</div>
+</div>
+
+<script>
+// ── Scroll simulator ──────────────────────────────────────────
+var contacts = {
+  A:["Alex Anderson","Anna Haro"],B:["Ben Brown"],C:["Carol Carter","Carlos Garcia"],
+  D:["Daniel Higgins","David Taylor","Diana Devito"],E:["Emily Evans"],
+  F:["Frank Fisher"],G:["Grace Green"],H:["Hans Schmidt","Hank Zakroff","Henry Hall"],
+};
+
+function buildScrollSim(slot) {
+  var d = document.createElement('div');
+  d.className = 'scroll-sim';
+  d.innerHTML =
+    '<div class="scroll-sim-label">📱 Simulateur CupertinoSliverNavigationBar — glissez pour scroller</div>' +
+    '<div class="scroll-sim-controls">' +
+      '<span style="font-size:12px;color:var(--mt);font-family:JetBrains Mono,monospace">Scroll :</span>' +
+      '<input class="scroll-slider" id="scroll-slider" type="range" min="0" max="100" value="0" step="1"/>' +
+      '<span class="scroll-pos-label" id="scroll-pos">0 px</span>' +
+    '</div>' +
+    '<div class="phone-frame">' +
+      '<div class="nav-bar" id="nav-bar">' +
+        '<div class="compact-title" id="compact-title" style="height:0;opacity:0;font-size:14px;padding-top:0;padding-bottom:0">iPhone</div>' +
+        '<div class="large-title" id="large-title" style="font-size:26px;padding-top:44px;padding-bottom:8px">iPhone</div>' +
+        '<div class="search-bar" id="search-bar"><span>🔍</span><span style="flex:1">Rechercher</span><span>🎤</span></div>' +
+        '<div style="height:8px"></div>' +
+      '</div>' +
+      '<div class="scroll-content" id="scroll-content" style="top:130px">' +
+        Object.entries(contacts).map(function(e){ return '<div class="alpha-section"><div class="alpha-letter">'+e[0]+'</div>'+e[1].map(function(n){ return '<div class="contact-row">'+n+'</div>'; }).join('')+'</div>'; }).join('') +
+      '</div>' +
+    '</div>' +
+    '<div class="sim-state-label" id="sim-state">↑ En haut — grand titre visible + barre de recherche</div>';
+  slot.appendChild(d);
+  document.getElementById('scroll-slider').addEventListener('input', function() {
+    updateScrollSim(parseInt(this.value));
+  });
+  updateScrollSim(0);
+}
+
+function updateScrollSim(val) {
+  var t = val / 100;
+  var navBar = document.getElementById('nav-bar');
+  var largeTitleEl = document.getElementById('large-title');
+  var searchBar = document.getElementById('search-bar');
+  var compactTitle = document.getElementById('compact-title');
+  var content = document.getElementById('scroll-content');
+  var stateEl = document.getElementById('sim-state');
+  var posEl = document.getElementById('scroll-pos');
+  if (!navBar) return;
+
+  var scrollPx = Math.round(t * 200);
+  posEl.textContent = scrollPx + ' px';
+
+  // Phase 1: 0-40 — large title shrinks
+  // Phase 2: 40-70 — search bar collapses
+  // Phase 3: 70-100 — compact title appears
+
+  var largeFontSize = 26 - t * 14; // 26→12
+  var largePaddingTop = 44 - t * 30; // 44→14
+  var largePaddingBot = 8 - t * 6;
+  var largeOpacity = Math.max(0, 1 - t * 2.5);
+
+  var searchH = Math.max(0, 32 - t * 70);
+  var searchM = Math.max(0, 8 - t * 16);
+  var searchOpacity = Math.max(0, 1 - t * 3);
+
+  var compactH = Math.max(0, (t - 0.6) / 0.4 * 36);
+  var compactOpacity = Math.max(0, (t - 0.6) / 0.4);
+  var compactPadTop = Math.max(0, compactH > 0 ? 8 : 0);
+
+  largeTitleEl.style.fontSize = largeFontSize + 'px';
+  largeTitleEl.style.paddingTop = largePaddingTop + 'px';
+  largeTitleEl.style.paddingBottom = largePaddingBot + 'px';
+  largeTitleEl.style.opacity = largeOpacity;
+
+  searchBar.style.height = searchH + 'px';
+  searchBar.style.marginBottom = searchM + 'px';
+  searchBar.style.marginTop = searchM + 'px';
+  searchBar.style.opacity = searchOpacity;
+  searchBar.style.padding = searchH > 10 ? '6px 12px' : '0 12px';
+
+  compactTitle.style.height = compactH + 'px';
+  compactTitle.style.opacity = compactOpacity;
+  compactTitle.style.paddingTop = compactPadTop + 'px';
+  compactTitle.style.paddingBottom = compactPadTop + 'px';
+
+  var navH = largePaddingTop + largeFontSize + largePaddingBot + searchH + searchM*2 + 8 + compactH + compactPadTop*2;
+  content.style.top = (navH + 4) + 'px';
+  content.style.transform = 'translateY(-' + (scrollPx * 0.8) + 'px)';
+
+  if (stateEl) {
+    if (t < 0.3) { stateEl.textContent = '↑ En haut — grand titre visible + barre de recherche'; stateEl.style.color = 'var(--gn)'; }
+    else if (t < 0.7) { stateEl.textContent = '↕ Défilement — titre se rétracte, recherche se cache'; stateEl.style.color = 'var(--yw)'; }
+    else { stateEl.textContent = '↓ En bas — barre compacte avec titre centré'; stateEl.style.color = 'var(--cups)'; }
+  }
+}
+
+// ── Sliver taxonomy widget ────────────────────────────────────
+function buildTaxonomy(slot) {
+  var d = document.createElement('div');
+  d.className = 'sliver-taxonomy';
+  d.innerHTML =
+    '<div class="sliver-tax-label">🗂 Taxonomie des slivers — ce qui peut aller dans CustomScrollView.slivers:[]</div>' +
+    '<div class="sliver-grid">' +
+      '<div class="sliver-card"><div class="sc-name sliver-color">CupertinoSliverNavigationBar</div><div class="sc-desc">✅ Sliver natif — barre collapsible iOS</div></div>' +
+      '<div class="sliver-card"><div class="sc-name sliver-color">SliverList.list(children:[])</div><div class="sc-desc">✅ Sliver natif — liste de widgets ordinaires</div></div>' +
+      '<div class="sliver-card"><div class="sc-name sliver-color">SliverList.builder(...)</div><div class="sc-desc">✅ Sliver natif — liste lazy (recommandé)</div></div>' +
+      '<div class="sliver-card"><div class="sc-name sliver-color">SliverPadding(...)</div><div class="sc-desc">✅ Sliver natif — padding autour d\'un sliver</div></div>' +
+      '<div class="sliver-divider">⚠ Widgets ordinaires → doivent être adaptés</div>' +
+      '<div class="sliver-card adapter"><div class="sc-name adapter-color">SliverToBoxAdapter</div><div class="sc-desc">🔄 Adaptateur — wrapping un widget ordinaire</div></div>' +
+      '<div class="sliver-card adapter"><div class="sc-name adapter-color">SliverFillRemaining</div><div class="sc-desc">🔄 Adaptateur — widget qui remplit le reste</div></div>' +
+      '<div class="sliver-card" style="border-color:rgba(255,92,122,0.3);background:rgba(255,92,122,0.05)"><div class="sc-name" style="color:var(--rd)">Text("hello")</div><div class="sc-desc" style="color:var(--rd)">❌ Widget ordinaire — interdit directement</div></div>' +
+      '<div class="sliver-card" style="border-color:rgba(255,92,122,0.3);background:rgba(255,92,122,0.05)"><div class="sc-name" style="color:var(--rd)">Container(...)</div><div class="sc-desc" style="color:var(--rd)">❌ Widget ordinaire — interdit directement</div></div>' +
+    '</div>';
+  slot.appendChild(d);
+}
+
+// ── Quiz data ─────────────────────────────────────────────────
+var Qs = [
+  {
+    q: "Quelle est la différence fondamentale entre slivers et widgets ordinaires ?",
+    taxonomy: true,
+    options: [
+      "Les slivers peuvent avoir un nombre illimité d'enfants.",
+      "Les slivers sont des widgets spécialisés pour les layouts scrollables et ne peuvent être qu'enfants directs de ScrollViews comme CustomScrollView.",
+      "Les slivers sont plus rapides à rendre que les widgets ordinaires.",
+      "Les slivers gèrent automatiquement les gestes de l'utilisateur.",
+    ],
+    correct: 1,
+    expl: "Les slivers fonctionnent exclusivement dans des ScrollViews (CustomScrollView, NestedScrollView). Les widgets ordinaires peuvent être utilisés partout. On ne peut pas placer un Container ou Text directement dans slivers:[] — il faut SliverToBoxAdapter ou SliverFillRemaining.",
+  },
+  {
+    q: "Comment utiliser un widget ordinaire (non-sliver) dans le slivers:[] d'un CustomScrollView ?",
+    code: [
+      "<span class='ty'>CustomScrollView</span>(",
+      "  slivers: [",
+      "    <span class='ty'>CupertinoSliverNavigationBar</span>(...), <span class='cm'>// sliver ✅</span>",
+      "    ???(child: <span class='ty'>CupertinoListSection</span>(...)), <span class='cm'>// adapter ?</span>",
+      "    ???(child: <span class='ty'>Center</span>(child: <span class='ty'>Text</span>(<span class='str'>'...'</span>))), <span class='cm'>// reste ?</span>",
+      "  ],",
+      ")",
+    ],
+    options: [
+      "Le passer directement — CustomScrollView accepte tout type de widget.",
+      "Appeler .toSliver() sur le widget — toute widget Flutter supporte cette methode.",
+      "L'envelopper dans SliverToBoxAdapter (taille connue) ou SliverFillRemaining (remplit le reste).",
+      "Remplacer CustomScrollView par SingleChildScrollView qui accepte les widgets.",
+    ],
+    correct: 2,
+    expl: "SliverToBoxAdapter convertit n'importe quel widget ordinaire en sliver pour les éléments de taille fixe/connue. SliverFillRemaining est utilisé quand le widget doit occuper tout l'espace restant du scroll. Ces deux adaptateurs sont les seuls ponts officiels entre widgets et slivers.",
+  },
+  {
+    q: "Quel est le comportement de CupertinoSliverNavigationBar.search au défilement ?",
+    scroll: true,
+    options: [
+      "La barre reste fixe en haut pendant tout le scroll — seul le contenu défile.",
+      "Le grand titre disparaît instantanément et la barre compacte apparaît sans animation.",
+      "Le grand titre se rétracte progressivement en titre compact, et le champ de recherche glisse dans la barre au défilement vers le bas.",
+      "La barre de navigation disparaît complètement quand on fait défiler vers le bas.",
+    ],
+    correct: 2,
+    expl: "CupertinoSliverNavigationBar reproduit le comportement iOS natif : au défilement vers le bas, le grand titre se rétracte en douceur pour devenir un titre compact dans la barre. Le champ de recherche intégré glisse également dans la barre compacte. L'animation inverse se produit quand on remonte.",
+  },
+  {
+    q: "Pourquoi ContactListSection n'est-il pas un sliver, alors qu'il est utilisé dans SliverList.list ?",
+    code: [
+      "<span class='ty'>SliverList</span>.list(",
+      "  children: [",
+      "    <span class='kw'>const</span> <span class='ty'>SizedBox</span>(height: <span class='cm'>20</span>),",
+      "    ...contacts.keys.map((initial) => <span class='ty'>ContactListSection</span>(  <span class='cm'>// widget ordinaire</span>",
+      "      lastInitial: initial,",
+      "      contacts: contacts[initial]!,",
+      "    )),",
+      "  ],  <span class='cm'>// List&lt;Widget&gt; — pas List&lt;Sliver&gt;</span>",
+      ")",
+    ],
+    options: [
+      "Parce que ContactListSection hérite de StatelessWidget et non d'un sliver.",
+      "Parce que SliverList.list accepte une List<Widget> ordinaire et gère la conversion en slivers en interne.",
+      "Parce que ContactListSection est trop simple pour être un sliver.",
+      "Parce qu'un sliver ne peut pas afficher du texte stylisé.",
+    ],
+    correct: 1,
+    expl: "SliverList.list(children: [...]) accepte une List<Widget> ordinaire — le constructeur simplifié se charge de la conversion interne via SliverChildListDelegate. ContactListSection est un widget StatelessWidget standard. On n'a pas besoin de SliverToBoxAdapter manuels pour chaque item dans children:[].",
+  },
+  {
+    q: "Pourquoi crée-t-on _ContactGroupsView et _ContactListView comme widgets privés ?",
+    code: [
+      "<span class='cm'>// Widget PUBLIC : coquille fine, responsabilité = navigation</span>",
+      "<span class='kw'>class</span> <span class='ty'>ContactGroupsPage</span> <span class='kw'>extends</span> <span class='ty'>StatelessWidget</span> {",
+      "  <span class='kw'>@override</span>",
+      "  <span class='ty'>Widget</span> <span class='fn'>build</span>(<span class='ty'>BuildContext</span> context) {",
+      "    <span class='kw'>return</span> <span class='ty'>_ContactGroupsView</span>(...); <span class='cm'>// délègue</span>",
+      "  }",
+      "}",
+      "",
+      "<span class='cm'>// Widget PRIVE : contient toute la logique d'affichage</span>",
+      "<span class='kw'>class</span> _ContactGroupsView <span class='kw'>extends</span> <span class='ty'>StatelessWidget</span> { ... }",
+    ],
+    options: [
+      "Parce que Flutter oblige à séparer les widgets de plus de 50 lignes.",
+      "Parce que les widgets privés ne peuvent pas être testés unitairement.",
+      "Pour éviter la duplication : _ContactGroupsView est utilisé pour le téléphone ET la sidebar tablette. Le préfixe _ signale que c'est un détail d'implémentation privé au fichier.",
+      "Pour améliorer les performances car les widgets privés sont mis en cache.",
+    ],
+    correct: 2,
+    expl: "_ContactGroupsView sera utilisé dans ContactGroupsPage (téléphone) ET dans la sidebar du layout tablette de AdaptiveLayout — sans dupliquer le code de la CustomScrollView. ContactGroupsPage reste une coquille légère focalisée sur la navigation. Le préfixe _ indique que ce widget est privé au fichier dart.",
+  },
+];
+
+var LETTERS = ['A','B','C','D'];
+var cur = 0, score = 0, results = [];
+
+function render() {
+  var c = document.getElementById('qc');
+  if (cur >= Qs.length) { showResults(); return; }
+  var q = Qs[cur];
+  c.innerHTML = '';
+  var card = document.createElement('div');
+  card.className = 'card';
+  var codeHtml = q.code ? '<div class="qcode">' + q.code.join('<br>') + '</div>' : '';
+  card.innerHTML =
+    '<div class="qnum">Question ' + (cur+1) + ' sur ' + Qs.length + '</div>' +
+    '<p class="qtxt">' + q.q + '</p>' +
+    (q.taxonomy ? '<div id="tax-slot"></div>' : '') +
+    codeHtml +
+    (q.scroll ? '<div id="scroll-slot"></div>' : '') +
+    '<div class="opts" id="opts"></div>' +
+    '<div class="expl" id="expl"><strong>💡 Explication</strong>' + q.expl + '</div>';
+  c.appendChild(card);
+  if (q.taxonomy) buildTaxonomy(document.getElementById('tax-slot'));
+  if (q.scroll) buildScrollSim(document.getElementById('scroll-slot'));
+  var optsEl = card.querySelector('#opts');
+  q.options.forEach(function(opt, i) {
+    var btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.innerHTML = '<span class="ol">' + LETTERS[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = function() { handleAnswer(i); };
+    optsEl.appendChild(btn);
+  });
+  var nb = document.createElement('button');
+  nb.className = 'nbtn'; nb.id = 'nbtn';
+  nb.textContent = cur === Qs.length-1 ? 'Voir les résultats →' : 'Question suivante →';
+  nb.onclick = function() { cur++; render(); updatePg(); };
+  c.appendChild(nb);
+  updatePg();
+}
+
+function handleAnswer(chosen) {
+  var q = Qs[cur];
+  var opts = document.querySelectorAll('.opt');
+  opts.forEach(function(b) { b.disabled = true; });
+  var ok = chosen === q.correct;
+  if (ok) score++;
+  results[cur] = ok;
+  opts.forEach(function(b, i) {
+    if (i === q.correct) b.classList.add('correct');
+    else if (i === chosen && !ok) { b.classList.add('wrong'); b.classList.add('shake'); }
+    else b.classList.add('dimmed');
+  });
+  document.getElementById('expl').classList.add('show');
+  document.getElementById('nbtn').classList.add('show');
+}
+
+function updatePg() {
+  document.getElementById('pgfill').style.width = (cur/Qs.length*100) + '%';
+  document.getElementById('pglbl').textContent = cur + ' / ' + Qs.length;
+}
+
+function showResults() {
+  document.getElementById('qc').innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('snum').textContent = score;
+  setTimeout(function() {
+    document.getElementById('rfill').style.strokeDashoffset = 427.26 - (score/Qs.length)*427.26;
+  }, 100);
+  var pct = score/Qs.length;
+  var t, m;
+  if(pct===1){t='Score parfait ! 🎉';m='Maîtrise complète des slivers et du scrolling avancé Flutter. Prêt pour la navigation par pile !';}
+  else if(pct>=.8){t='Très bien ! 🚀';m='Excellente compréhension de CustomScrollView et CupertinoSliverNavigationBar. Revoyez les points manqués.';}
+  else if(pct>=.6){t='Bien ! 📚';m='Bonne base. Relisez la distinction sliver/widget et les adaptateurs SliverToBoxAdapter/SliverFillRemaining.';}
+  else{t='À retravailler 💪';m='Refaites les exercices slivers du TP, en insistant sur la taxonomie des slivers, puis retentez.';}
+  document.getElementById('rtitle').textContent = t;
+  document.getElementById('rmsg').textContent = m;
+  var g = document.getElementById('sgrid'); g.innerHTML = '';
+  results.forEach(function(ok, i) {
+    var tile = document.createElement('div');
+    tile.className = 'stile ' + (ok?'ok':'ko');
+    tile.title = 'Q'+(i+1)+' : '+(ok?'Correct':'Incorrect');
+    tile.textContent = 'Q'+(i+1);
+    g.appendChild(tile);
+  });
+  document.getElementById('pgfill').style.width = '100%';
+  document.getElementById('pglbl').textContent = '5 / 5';
+}
+
+function restart() {
+  cur=0;score=0;results=[];
+  document.getElementById('results').style.display='none';
+  document.getElementById('rfill').style.strokeDashoffset='427.26';
+  render();updatePg();
+}
+render();
+</script>
+</body>
+</html>
