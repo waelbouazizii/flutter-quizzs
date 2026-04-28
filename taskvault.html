@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — TaskVault · Persistance Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --fb:#0553B1;--fs:#54C5F8;--bg:#050D1A;--sf:#0C1829;--sf2:#112240;
+  --bd:rgba(84,197,248,0.15);--tx:#E8F4FD;--mt:#6B8FAF;
+  --gn:#00E5A0;--gnb:rgba(0,229,160,0.08);
+  --rd:#FF5C7A;--rdb:rgba(255,92,122,0.08);
+  --yw:#FFD166;--r:12px;
+}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(84,197,248,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(84,197,248,0.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:rgba(5,83,177,0.25);top:-150px;right:-100px}
+.orb2{width:400px;height:400px;background:rgba(84,197,248,0.1);bottom:80px;left:-80px}
+.wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:40px 24px 80px}
+
+header{text-align:center;margin-bottom:52px;animation:fd .7s ease both}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(84,197,248,0.1);border:1px solid rgba(84,197,248,0.25);border-radius:999px;padding:6px 16px;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--fs);text-transform:uppercase;margin-bottom:20px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--fs);animation:pulse 2s infinite}
+h1{font-size:clamp(26px,5vw,40px);font-weight:800;line-height:1.15;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 30%,var(--fs));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.sub{color:var(--mt);font-size:14px;font-weight:300;line-height:1.6}
+
+.pgwrap{margin-bottom:44px}
+.pgmeta{display:flex;justify-content:space-between;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--mt);margin-bottom:8px}
+.pgmeta span:last-child{color:var(--fs)}
+.pgtrk{height:3px;background:var(--sf2);border-radius:999px;overflow:hidden}
+.pgfill{height:100%;background:linear-gradient(90deg,var(--fb),var(--fs));border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+
+/* ── TaskVault App Simulator ─────────────────────────────────── */
+.taskvault-sim{background:var(--sf2);border:1px solid var(--bd);border-radius:16px;padding:20px;margin:-4px 0 20px}
+.tv-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:16px}
+.phone-mock{width:260px;margin:0 auto;border:2px solid rgba(84,197,248,0.3);border-radius:20px;overflow:hidden;background:#121212}
+.tv-appbar{background:#1565C0;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.tv-title{color:#fff;font-weight:700;font-size:14px}
+.tv-actions{display:flex;gap:8px}
+.tv-icon-btn{background:none;border:none;color:rgba(255,255,255,0.8);font-size:16px;cursor:pointer;padding:4px;border-radius:4px;transition:background .2s}
+.tv-icon-btn:hover{background:rgba(255,255,255,0.15)}
+.tv-body{min-height:240px;background:#1a1a1a;overflow:hidden}
+.tv-onboarding{padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;gap:12px}
+.tv-onb-title{color:#fff;font-weight:700;font-size:14px;text-align:center}
+.tv-input{width:100%;padding:8px 12px;background:#2a2a2a;border:1px solid rgba(84,197,248,0.3);border-radius:6px;color:#fff;font-family:'Sora',sans-serif;font-size:12px;outline:none}
+.tv-btn{padding:8px 16px;background:#1565C0;border:none;border-radius:6px;color:#fff;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;width:100%;transition:opacity .2s}
+.tv-btn:hover{opacity:.85}
+.tv-task-list{padding:8px}
+.tv-task{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#2a2a2a;border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all .2s}
+.tv-task:hover{background:#333}
+.tv-task.done .tv-task-title{text-decoration:line-through;color:#666}
+.tv-checkbox{width:18px;height:18px;border-radius:4px;border:2px solid rgba(84,197,248,0.4);background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+.tv-checkbox.checked{background:#1565C0;border-color:#1565C0;color:#fff}
+.tv-task-title{font-size:12px;color:#ddd;flex:1}
+.tv-delete{background:none;border:none;color:#FF5C7A;cursor:pointer;font-size:14px;padding:2px;opacity:0;transition:opacity .2s}
+.tv-task:hover .tv-delete{opacity:1}
+.tv-add-row{display:flex;gap:6px;padding:8px}
+.tv-add-input{flex:1;padding:7px 10px;background:#2a2a2a;border:1px solid rgba(84,197,248,0.2);border-radius:6px;color:#fff;font-family:'Sora',sans-serif;font-size:11px;outline:none}
+.tv-add-btn{padding:7px 12px;background:#1565C0;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer}
+.tv-empty{color:#666;font-size:12px;text-align:center;padding:40px 16px}
+.tv-stats{display:flex;gap:8px;padding:8px 8px 0;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mt)}
+.tv-stat{background:rgba(84,197,248,0.06);border:1px solid rgba(84,197,248,0.1);border-radius:6px;padding:4px 8px}
+.tv-storage-log{margin-top:12px;padding:10px 12px;background:var(--sf);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mt);max-height:70px;overflow-y:auto}
+.tv-storage-log div{margin-bottom:2px}
+.tv-storage-log div.sp{color:#54C5F8}
+.tv-storage-log div.sql{color:#CE93D8}
+.tv-storage-log div.file{color:#4EC9B0}
+
+/* Card */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:34px;margin-bottom:16px;animation:fu .5s ease both;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--fb),var(--fs),transparent)}
+.qnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--fs);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.qnum::after{content:'';flex:1;height:1px;background:var(--bd)}
+.qtxt{font-size:17px;font-weight:600;line-height:1.55;margin-bottom:24px}
+.qcode{background:#1E1E1E;border:1px solid rgba(84,197,248,0.1);border-radius:8px;padding:12px 16px;margin:-4px 0 18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#D4D4D4;line-height:1.7;overflow-x:auto}
+.kw{color:#569CD6}.fn{color:#DCDCAA}.cm{color:#6A9955}.str{color:#CE9178}.ty{color:#4EC9B0}
+
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:13px;padding:14px 18px;background:var(--sf2);border:1px solid transparent;border-radius:var(--r);cursor:pointer;transition:all .2s;text-align:left;width:100%;font-family:'Sora',sans-serif;color:var(--tx);font-size:14px;line-height:1.5}
+.opt:hover:not(:disabled){border-color:rgba(84,197,248,0.3);background:rgba(84,197,248,0.05);transform:translateX(4px)}
+.opt:disabled{cursor:default}
+.ol{flex-shrink:0;width:26px;height:26px;border-radius:6px;background:rgba(84,197,248,0.1);border:1px solid rgba(84,197,248,0.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--fs);margin-top:1px}
+.opt.correct{border-color:var(--gn);background:var(--gnb)}.opt.correct .ol{background:var(--gn);border-color:var(--gn);color:#000}
+.opt.wrong{border-color:var(--rd);background:var(--rdb);opacity:.7}.opt.wrong .ol{background:var(--rd);border-color:var(--rd);color:#fff}
+.opt.dimmed{opacity:.32}
+.expl{display:none;margin-top:18px;padding:14px 18px;background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-radius:var(--r);font-size:13px;line-height:1.65;color:#ccc}
+.expl.show{display:block;animation:fu .3s ease both}
+.expl strong{color:var(--yw);font-weight:600;display:block;margin-bottom:3px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.nbtn{display:none;margin-top:18px;width:100%;padding:15px;background:linear-gradient(135deg,var(--fb),#1870E0);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.nbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(5,83,177,0.4)}
+.nbtn.show{display:block;animation:fu .3s ease both}
+
+#results{display:none;text-align:center;animation:fu .6s ease both}
+.sring{width:160px;height:160px;margin:0 auto 28px;position:relative}
+.sring svg{transform:rotate(-90deg)}.sring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.rbg{stroke:var(--sf2)}.rfill{stroke:url(#sg);transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)}
+.slabel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.snum{font-size:42px;font-weight:800;line-height:1;background:linear-gradient(135deg,#fff,var(--fs));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sdenom{font-size:14px;color:var(--mt);font-family:'JetBrains Mono',monospace}
+.rtitle{font-size:24px;font-weight:800;margin-bottom:8px}.rmsg{color:var(--mt);font-size:14px;line-height:1.6;margin-bottom:32px}
+.rbtn{display:inline-flex;align-items:center;gap:10px;padding:13px 28px;background:transparent;border:1px solid rgba(84,197,248,0.3);border-radius:var(--r);color:var(--fs);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.rbtn:hover{background:rgba(84,197,248,0.08);transform:translateY(-2px)}
+.sgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:28px 0}
+.stile{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.stile.ok{background:var(--gnb);border:1px solid var(--gn);color:var(--gn)}.stile.ko{background:var(--rdb);border:1px solid var(--rd);color:var(--rd)}
+
+@keyframes fd{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .35s ease}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="wrap">
+
+<header>
+  <div class="badge"><span class="dot"></span>IAM1 · Flutter — Persistance · TaskVault</div>
+  <h1>TaskVault<br>Persistance Flutter</h1>
+  <p class="sub">Quiz · 6 questions · shared_preferences · SQLite (sqflite) · Fichiers (path_provider)</p>
+</header>
+
+<div class="pgwrap">
+  <div class="pgmeta"><span>PROGRESSION</span><span id="pglbl">0 / 6</span></div>
+  <div class="pgtrk"><div class="pgfill" id="pgfill"></div></div>
+</div>
+
+<div id="qc"></div>
+
+<div id="results">
+  <div class="sring">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#0553B1"/><stop offset="100%" stop-color="#54C5F8"/>
+      </linearGradient></defs>
+      <circle class="rbg" cx="80" cy="80" r="68"/>
+      <circle class="rfill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="rfill"/>
+    </svg>
+    <div class="slabel"><span class="snum" id="snum">0</span><span class="sdenom">/ 6</span></div>
+  </div>
+  <h2 class="rtitle" id="rtitle"></h2>
+  <p class="rmsg" id="rmsg"></p>
+  <div class="sgrid" id="sgrid"></div>
+  <button class="rbtn" onclick="restart()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+    Recommencer
+  </button>
+</div>
+</div>
+
+<script>
+// ── TaskVault Simulator ────────────────────────────────────────
+var tvState = {
+  userName: null,
+  darkMode: false,
+  tasks: [],
+  nextId: 1,
+  logs: [],
+};
+
+function tvLog(msg, type) {
+  tvState.logs.unshift({ msg: msg, type: type });
+  if (tvState.logs.length > 12) tvState.logs.pop();
+}
+
+function buildTaskVault(slot) {
+  var d = document.createElement('div');
+  d.className = 'taskvault-sim';
+  d.innerHTML = '<div class="tv-label">📱 TaskVault — Simulateur interactif avec persistance</div>' +
+    '<div class="phone-mock" id="tv-phone"></div>' +
+    '<div class="tv-storage-log" id="tv-log"><div style="color:var(--mt)">Journalisation des operatons de persistance...</div></div>';
+  slot.appendChild(d);
+  renderTV();
+}
+
+function renderTV() {
+  var phone = document.getElementById('tv-phone');
+  if (!phone) return;
+  if (!tvState.userName) { renderOnboarding(phone); }
+  else { renderHome(phone); }
+  renderLogs();
+}
+
+function renderOnboarding(phone) {
+  phone.innerHTML =
+    '<div class="tv-appbar"><span class="tv-title">TaskVault</span></div>' +
+    '<div class="tv-onboarding">' +
+      '<div class="tv-onb-title">Bienvenue ! Comment vous appelez-vous ?</div>' +
+      '<input class="tv-input" id="tv-name-input" placeholder="Votre prenom..." />' +
+      '<button class="tv-btn" onclick="tvSaveName()">Commencer</button>' +
+    '</div>';
+}
+
+function tvSaveName() {
+  var input = document.getElementById('tv-name-input');
+  var name = input ? input.value.trim() : '';
+  if (!name) return;
+  tvState.userName = name;
+  tvLog('shared_preferences.setString("user_name", "' + name + '")', 'sp');
+  renderTV();
+}
+
+function renderHome(phone) {
+  var done = tvState.tasks.filter(function(t){return t.done;}).length;
+  phone.innerHTML =
+    '<div class="tv-appbar">' +
+      '<span class="tv-title">Bonjour, ' + tvState.userName + ' !</span>' +
+      '<div class="tv-actions">' +
+        '<button class="tv-icon-btn" onclick="tvExport()" title="Exporter">💾</button>' +
+        '<button class="tv-icon-btn" onclick="tvToggleTheme()" title="Theme">' + (tvState.darkMode ? '☀️' : '🌙') + '</button>' +
+        '<button class="tv-icon-btn" onclick="tvReset()" title="Reset">↺</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="tv-stats">' +
+      '<span class="tv-stat">📋 ' + tvState.tasks.length + ' tâches</span>' +
+      '<span class="tv-stat">✅ ' + done + ' faites</span>' +
+      '<span class="tv-stat">⏳ ' + (tvState.tasks.length - done) + ' restantes</span>' +
+    '</div>' +
+    '<div class="tv-body"><div class="tv-task-list" id="tv-task-list"></div></div>' +
+    '<div class="tv-add-row">' +
+      '<input class="tv-add-input" id="tv-task-input" placeholder="Nouvelle tâche..." />' +
+      '<button class="tv-add-btn" onclick="tvAddTask()">+</button>' +
+    '</div>';
+
+  var list = document.getElementById('tv-task-list');
+  if (!list) return;
+  if (tvState.tasks.length === 0) {
+    list.innerHTML = '<div class="tv-empty">Aucune tâche. Ajoutez-en une !</div>';
+    return;
+  }
+  tvState.tasks.forEach(function(task) {
+    var div = document.createElement('div');
+    div.className = 'tv-task' + (task.done ? ' done' : '');
+    div.innerHTML =
+      '<div class="tv-checkbox ' + (task.done ? 'checked' : '') + '" onclick="tvToggle(' + task.id + ')">' +
+        (task.done ? '✓' : '') +
+      '</div>' +
+      '<span class="tv-task-title">' + task.title + '</span>' +
+      '<button class="tv-delete" onclick="tvDelete(' + task.id + ')">✕</button>';
+    list.appendChild(div);
+  });
+
+  var input = document.getElementById('tv-task-input');
+  if (input) input.onkeydown = function(e){ if(e.key==='Enter') tvAddTask(); };
+}
+
+function tvAddTask() {
+  var input = document.getElementById('tv-task-input');
+  var title = input ? input.value.trim() : '';
+  if (!title) return;
+  var id = tvState.nextId++;
+  tvState.tasks.push({ id: id, title: title, done: false });
+  tvLog('db.insert("tasks", {id:' + id + ', title:"' + title + '", is_done:0})', 'sql');
+  if (input) input.value = '';
+  renderTV();
+}
+
+function tvToggle(id) {
+  var task = tvState.tasks.find(function(t){return t.id===id;});
+  if (!task) return;
+  task.done = !task.done;
+  tvLog('db.update("tasks", {is_done:' + (task.done?1:0) + '}, where:"id=?", whereArgs:[' + id + '])', 'sql');
+  renderTV();
+}
+
+function tvDelete(id) {
+  var title = (tvState.tasks.find(function(t){return t.id===id;})||{}).title || '';
+  tvState.tasks = tvState.tasks.filter(function(t){return t.id!==id;});
+  tvLog('db.delete("tasks", where:"id=?", whereArgs:[' + id + ']) — "' + title + '"', 'sql');
+  renderTV();
+}
+
+function tvToggleTheme() {
+  tvState.darkMode = !tvState.darkMode;
+  tvLog('shared_preferences.setBool("dark_mode", ' + tvState.darkMode + ')', 'sp');
+  renderTV();
+}
+
+function tvExport() {
+  var count = tvState.tasks.length;
+  var ts = new Date().toISOString().substring(0,19).replace(/:/g,'-');
+  tvLog('File("tasks_' + ts + '.txt").writeAsString(...' + count + ' tâches)', 'file');
+  renderTV();
+  var log = document.getElementById('tv-log');
+  if (log) {
+    var flash = document.createElement('div');
+    flash.style.cssText = 'color:#4EC9B0;font-weight:700;margin-bottom:4px';
+    flash.textContent = '✅ Export réussi : tasks_' + ts + '.txt (' + count + ' tâches)';
+    log.insertBefore(flash, log.firstChild);
+    setTimeout(function(){ flash.style.opacity='0.4'; }, 2000);
+  }
+}
+
+function tvReset() {
+  tvState = { userName: null, darkMode: false, tasks: [], nextId: 1, logs: [] };
+  tvLog('shared_preferences.clear() + db réinitialisée', 'sp');
+  renderTV();
+}
+
+function renderLogs() {
+  var log = document.getElementById('tv-log');
+  if (!log) return;
+  log.innerHTML = '';
+  tvState.logs.forEach(function(entry) {
+    var div = document.createElement('div');
+    div.className = entry.type;
+    var icon = entry.type==='sp' ? '🔵' : entry.type==='sql' ? '🟣' : '🟢';
+    div.textContent = icon + ' ' + entry.msg;
+    log.appendChild(div);
+  });
+  if (tvState.logs.length === 0) {
+    log.innerHTML = '<div style="color:var(--mt)">Interagissez avec l\'app pour voir les opérations de persistance...</div>';
+  }
+}
+
+// ── Quiz data ────────────────────────────────────────────────────
+var Qs = [
+  {
+    q: "Dans TaskVault, pourquoi le prénom est-il stocké dans shared_preferences et non dans SQLite ?",
+    tv: true,
+    options: [
+      "Parce que shared_preferences est plus rapide que SQLite pour les lectures.",
+      "Parce que shared_preferences est le seul package qui supporte les String.",
+      "Parce que c'est une donnée unique de type primitif (String), pas une entité structurée. shared_preferences est parfait pour les préférences simples.",
+      "Parce que SQLite ne peut pas stocker des String.",
+    ],
+    correct: 2,
+    expl: "Le prénom est une seule valeur de type String — pas besoin d'une table relationnelle. shared_preferences est exactement fait pour ça : petites préférences simples. SQLite serait surdimensionné pour stocker une unique chaîne.",
+  },
+  {
+    q: "Dans DatabaseService, pourquoi stocke-t-on isDone comme INTEGER (0 ou 1) et non BOOLEAN ?",
+    code: [
+      "<span class='cm'>// Dans Task.toMap() :</span>",
+      "<span class='str'>'is_done'</span>: isDone ? <span class='cm'>1</span> : <span class='cm'>0</span>,  <span class='cm'>// bool → int</span>",
+      "",
+      "<span class='cm'>// Dans Task.fromMap() :</span>",
+      "isDone: (map[<span class='str'>'is_done'</span>] <span class='kw'>as</span> <span class='ty'>int</span>) == <span class='cm'>1</span>,  <span class='cm'>// int → bool</span>",
+    ],
+    options: [
+      "Parce que sqflite ne supporte pas le type BOOLEAN dans toMap().",
+      "Parce que SQLite n'a pas de type BOOLEAN natif — il stocke sous forme d'INTEGER, REAL, TEXT ou BLOB. La convention est 0=false, 1=true.",
+      "Parce que les bool Dart ne sont pas sérialisables.",
+      "Pour des raisons de performance — INTEGER est plus rapide que BOOLEAN.",
+    ],
+    correct: 1,
+    expl: "SQLite n'a pas de type BOOLEAN natif. Son système de types : NULL, INTEGER, REAL, TEXT, BLOB. La convention universelle est INTEGER 0=false, 1=true. C'est pourquoi toMap() convertit isDone ? 1 : 0 et fromMap() reconvertit (map['is_done'] as int) == 1.",
+  },
+  {
+    q: "Pourquoi ExportService utilise-t-il StringBuffer plutôt que la concaténation String += ?",
+    code: [
+      "<span class='cm'>// ❌ Inefficace :</span>",
+      "<span class='ty'>String</span> content = <span class='str'>''</span>;",
+      "content += <span class='str'>'ligne1\\n'</span>;  <span class='cm'>// nouveau String à chaque +=</span>",
+      "content += <span class='str'>'ligne2\\n'</span>;  <span class='cm'>// O(n²) allocations</span>",
+      "",
+      "<span class='cm'>// ✅ Efficace :</span>",
+      "<span class='kw'>final</span> buffer = <span class='ty'>StringBuffer</span>();",
+      "buffer.<span class='fn'>writeln</span>(<span class='str'>'ligne1'</span>);  <span class='cm'>// tampon interne, O(n)</span>",
+      "buffer.<span class='fn'>writeln</span>(<span class='str'>'ligne2'</span>);",
+    ],
+    options: [
+      "StringBuffer est obligatoire pour écrire dans des fichiers avec dart:io.",
+      "Parce que += ne fonctionne pas avec les String multi-lignes.",
+      "Parce que String += crée un nouvel objet à chaque opération (O(n²)), tandis que StringBuffer accumule dans un tampon interne (O(n)).",
+      "Pour être compatible avec le mode asynchrone de writeAsString.",
+    ],
+    correct: 2,
+    expl: "Chaque String += crée un nouvel objet en mémoire contenant l'ancienne chaîne + le nouveau texte. Pour n concaténations : O(n²) allocations. StringBuffer maintient un tampon interne et ajoute en place : O(n). Pour exporter 100 tâches, la différence est significative.",
+  },
+  {
+    q: "Dans HomeScreen._toggleDone(), pourquoi appelle-t-on _loadData() après updateTask() ?",
+    code: [
+      "<span class='kw'>Future</span>&lt;<span class='kw'>void</span>&gt; _toggleDone(<span class='ty'>Task</span> task) <span class='kw'>async</span> {",
+      "  <span class='kw'>await</span> _db.<span class='fn'>updateTask</span>(task.<span class='fn'>copyWith</span>(isDone: !task.isDone));",
+      "  <span class='kw'>await</span> _loadData(); <span class='cm'>// ← pourquoi ce deuxième appel ?</span>",
+      "}",
+      "",
+      "<span class='kw'>Future</span>&lt;<span class='kw'>void</span>&gt; _loadData() <span class='kw'>async</span> {",
+      "  <span class='kw'>final</span> tasks = <span class='kw'>await</span> _db.<span class='fn'>getAllTasks</span>();",
+      "  <span class='fn'>setState</span>(() { _tasks = tasks; });",
+      "}",
+    ],
+    options: [
+      "Parce que sqflite nécessite un rechargement manuel après chaque mise à jour.",
+      "Pour synchroniser l'état local _tasks avec la BDD après modification, déclenchant une reconstruction de l'UI via setState() avec les données à jour.",
+      "Parce que updateTask() ne met pas à jour la BDD immédiatement.",
+      "Pour réinitialiser la connexion à la base de données.",
+    ],
+    correct: 1,
+    expl: "_tasks en mémoire et la BDD sont deux sources de vérité séparées. Après updateTask(), la BDD est à jour mais _tasks contient encore l'ancienne valeur. _loadData() relit la BDD et appelle setState() pour reconstruire l'UI. Cycle : modifier BDD → relire BDD → setState().",
+  },
+  {
+    q: "Dans main.dart, comment l'app décide-t-elle d'afficher OnboardingScreen ou HomeScreen ?",
+    code: [
+      "<span class='kw'>final</span> name = <span class='kw'>await</span> _prefs.<span class='fn'>getUserName</span>();",
+      "<span class='fn'>setState</span>(() {",
+      "  _onboardingDone = name != <span class='kw'>null</span>; <span class='cm'>// ← clé sentinelle</span>",
+      "});",
+      "",
+      "<span class='cm'>// Dans build() :</span>",
+      "home: _onboardingDone",
+      "  ? <span class='ty'>HomeScreen</span>(...)",
+      "  : <span class='ty'>OnboardingScreen</span>(...),",
+    ],
+    options: [
+      "Elle vérifie si la base de données SQLite contient des tâches.",
+      "Elle vérifie si l'application a été lancée plus de 5 fois.",
+      "Elle appelle getUserName() : si null → OnboardingScreen, si non-null → HomeScreen. Le prénom est la clé sentinelle du premier lancement.",
+      "Elle affiche toujours OnboardingScreen puis redirige vers HomeScreen.",
+    ],
+    correct: 2,
+    expl: "getUserName() retourne null si la clé 'user_name' n'existe pas encore dans shared_preferences. C'est le pattern 'clé sentinelle' : l'absence de la valeur indique le premier lancement. Une fois le prénom saisi et sauvegardé, les lancements suivants trouvent la valeur et vont directement à HomeScreen.",
+  },
+  {
+    q: "Quel est le résultat si l'utilisateur relance TaskVault après avoir ajouté 3 tâches, coché l'une d'elles, et changé le thème ?",
+    options: [
+      "L'app repart de zéro — les données en mémoire sont perdues à la fermeture.",
+      "Seules les tâches persistent — le thème et le prénom ne sont pas sauvegardés.",
+      "Tout persiste : le prénom (shared_preferences), les 3 tâches avec leurs états (SQLite), et le thème (shared_preferences).",
+      "Les tâches persistent mais la tâche cochée revient non-cochée.",
+    ],
+    correct: 2,
+    expl: "C'est l'objectif du TP : toutes les données persistent. Le prénom et le thème utilisent shared_preferences (lus au démarrage dans _init()). Les 3 tâches avec leurs états sont dans SQLite (lues par getAllTasks() dans initState de HomeScreen). Voilà la valeur de combiner plusieurs solutions.",
+  },
+];
+
+var LETTERS = ['A','B','C','D'];
+var cur = 0, score = 0, results = [];
+
+function render() {
+  var c = document.getElementById('qc');
+  if (cur >= Qs.length) { showResults(); return; }
+  var q = Qs[cur]; c.innerHTML = '';
+  var card = document.createElement('div'); card.className = 'card';
+  var codeHtml = q.code ? '<div class="qcode">' + q.code.join('<br>') + '</div>' : '';
+  card.innerHTML =
+    '<div class="qnum">Question ' + (cur+1) + ' sur ' + Qs.length + '</div>' +
+    '<p class="qtxt">' + q.q + '</p>' +
+    (q.tv ? '<div id="tv-slot"></div>' : '') +
+    codeHtml +
+    '<div class="opts" id="opts"></div>' +
+    '<div class="expl" id="expl"><strong>💡 Explication</strong>' + q.expl + '</div>';
+  c.appendChild(card);
+  if (q.tv) buildTaskVault(document.getElementById('tv-slot'));
+  var optsEl = card.querySelector('#opts');
+  q.options.forEach(function(opt, i) {
+    var btn = document.createElement('button'); btn.className = 'opt';
+    btn.innerHTML = '<span class="ol">' + LETTERS[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = function() { handleAnswer(i); };
+    optsEl.appendChild(btn);
+  });
+  var nb = document.createElement('button'); nb.className = 'nbtn'; nb.id = 'nbtn';
+  nb.textContent = cur === Qs.length-1 ? 'Voir les résultats →' : 'Question suivante →';
+  nb.onclick = function() { cur++; render(); updatePg(); };
+  c.appendChild(nb); updatePg();
+}
+
+function handleAnswer(chosen) {
+  var q = Qs[cur]; var opts = document.querySelectorAll('.opt');
+  opts.forEach(function(b){b.disabled=true;});
+  var ok = chosen===q.correct; if(ok) score++;
+  results[cur]=ok;
+  opts.forEach(function(b,i){
+    if(i===q.correct)b.classList.add('correct');
+    else if(i===chosen&&!ok){b.classList.add('wrong');b.classList.add('shake');}
+    else b.classList.add('dimmed');
+  });
+  document.getElementById('expl').classList.add('show');
+  document.getElementById('nbtn').classList.add('show');
+}
+
+function updatePg() {
+  document.getElementById('pgfill').style.width=(cur/Qs.length*100)+'%';
+  document.getElementById('pglbl').textContent=cur+' / '+Qs.length;
+}
+
+function showResults() {
+  document.getElementById('qc').innerHTML='';
+  document.getElementById('results').style.display='block';
+  document.getElementById('snum').textContent=score;
+  setTimeout(function(){document.getElementById('rfill').style.strokeDashoffset=427.26-(score/Qs.length)*427.26;},100);
+  var pct=score/Qs.length;
+  var t,m;
+  if(pct===1){t='Score parfait ! 🎉';m='TaskVault n\'a plus de secrets ! Vous maîtrisez les 3 couches de persistance Flutter.';}
+  else if(pct>=.8){t='Très bien ! 🚀';m='Excellente compréhension de TaskVault et des solutions de persistance.';}
+  else if(pct>=.6){t='Bien ! 📚';m='Bonne base. Relisez les parties sur SQLite (BOOLEAN) et la logique d\'onboarding.';}
+  else{t='À retravailler 💪';m='Refaites le TP TaskVault complet, puis retentez le quiz.';}
+  document.getElementById('rtitle').textContent=t;
+  document.getElementById('rmsg').textContent=m;
+  var g=document.getElementById('sgrid');g.innerHTML='';
+  results.forEach(function(ok,i){
+    var tile=document.createElement('div');
+    tile.className='stile '+(ok?'ok':'ko');
+    tile.title='Q'+(i+1)+' : '+(ok?'Correct':'Incorrect');
+    tile.textContent='Q'+(i+1);
+    g.appendChild(tile);
+  });
+  document.getElementById('pgfill').style.width='100%';
+  document.getElementById('pglbl').textContent='6 / 6';
+}
+
+function restart(){
+  cur=0;score=0;results=[];
+  tvState={userName:null,darkMode:false,tasks:[],nextId:1,logs:[]};
+  document.getElementById('results').style.display='none';
+  document.getElementById('rfill').style.strokeDashoffset='427.26';
+  render();updatePg();
+}
+render();
+</script>
+</body>
+</html>
