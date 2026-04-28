@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Persistance des Données Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --fb:#0553B1;--fs:#54C5F8;--bg:#050D1A;--sf:#0C1829;--sf2:#112240;
+  --bd:rgba(84,197,248,0.15);--tx:#E8F4FD;--mt:#6B8FAF;
+  --gn:#00E5A0;--gnb:rgba(0,229,160,0.08);
+  --rd:#FF5C7A;--rdb:rgba(255,92,122,0.08);
+  --yw:#FFD166;--r:12px;
+}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(84,197,248,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(84,197,248,0.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:rgba(5,83,177,0.25);top:-150px;right:-100px}
+.orb2{width:400px;height:400px;background:rgba(84,197,248,0.1);bottom:80px;left:-80px}
+.wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:40px 24px 80px}
+
+header{text-align:center;margin-bottom:52px;animation:fd .7s ease both}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(84,197,248,0.1);border:1px solid rgba(84,197,248,0.25);border-radius:999px;padding:6px 16px;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--fs);text-transform:uppercase;margin-bottom:20px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--fs);animation:pulse 2s infinite}
+h1{font-size:clamp(26px,5vw,40px);font-weight:800;line-height:1.15;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 30%,var(--fs));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.sub{color:var(--mt);font-size:14px;font-weight:300;line-height:1.6}
+
+.pgwrap{margin-bottom:44px}
+.pgmeta{display:flex;justify-content:space-between;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--mt);margin-bottom:8px}
+.pgmeta span:last-child{color:var(--fs)}
+.pgtrk{height:3px;background:var(--sf2);border-radius:999px;overflow:hidden}
+.pgfill{height:100%;background:linear-gradient(90deg,var(--fb),var(--fs));border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+
+/* Persistence chooser demo */
+.chooser{background:var(--sf2);border:1px solid var(--bd);border-radius:16px;padding:20px;margin:-4px 0 20px}
+.chooser-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:14px}
+.scenarios{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.scenario{padding:10px 14px;border-radius:8px;background:var(--sf);border:1px solid rgba(84,197,248,0.1);cursor:pointer;font-size:13px;transition:all .2s;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.scenario:hover{border-color:rgba(84,197,248,0.3);background:rgba(84,197,248,0.05)}
+.scenario.selected{border-color:var(--fs);background:rgba(84,197,248,0.08)}
+.scenario-text{flex:1}
+.scenario-answer{font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 10px;border-radius:6px;opacity:0;transition:opacity .3s;font-weight:700}
+.scenario.reveal .scenario-answer{opacity:1}
+.sa-sp{background:rgba(5,83,177,0.2);color:var(--fs);border:1px solid rgba(84,197,248,0.3)}
+.sa-file{background:rgba(0,105,92,0.2);color:#4EC9B0;border:1px solid rgba(78,201,176,0.3)}
+.sa-sql{background:rgba(91,45,142,0.2);color:#CE93D8;border:1px solid rgba(206,147,216,0.3)}
+.chooser-hint{font-size:11px;color:var(--mt);font-family:'JetBrains Mono',monospace;text-align:center}
+
+/* SQL injection demo */
+.sql-demo{background:var(--sf2);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:-4px 0 20px}
+.sql-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:12px}
+.sql-input-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.sql-input{flex:1;min-width:180px;padding:8px 12px;background:var(--sf);border:1px solid rgba(84,197,248,0.25);border-radius:8px;color:var(--tx);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none}
+.sql-input:focus{border-color:var(--fs)}
+.sql-btns{display:flex;gap:8px;flex-wrap:wrap}
+.sql-btn{padding:7px 14px;border-radius:8px;border:none;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.sql-btn.safe{background:rgba(0,229,160,0.15);color:var(--gn);border:1px solid rgba(0,229,160,0.3)}
+.sql-btn.unsafe{background:rgba(255,92,122,0.15);color:var(--rd);border:1px solid rgba(255,92,122,0.3)}
+.sql-result{margin-top:10px;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;min-height:40px;transition:all .3s}
+.sql-result.ok{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);color:var(--gn)}
+.sql-result.danger{background:rgba(255,92,122,0.08);border:1px solid rgba(255,92,122,0.25);color:var(--rd)}
+.sql-result.idle{background:rgba(84,197,248,0.05);border:1px solid rgba(84,197,248,0.1);color:var(--mt)}
+
+/* Card */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:34px;margin-bottom:16px;animation:fu .5s ease both;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--fb),var(--fs),transparent)}
+.qnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--fs);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.qnum::after{content:'';flex:1;height:1px;background:var(--bd)}
+.qtxt{font-size:17px;font-weight:600;line-height:1.55;margin-bottom:24px}
+.qcode{background:#1E1E1E;border:1px solid rgba(84,197,248,0.1);border-radius:8px;padding:12px 16px;margin:-4px 0 18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#D4D4D4;line-height:1.7;overflow-x:auto}
+.kw{color:#569CD6}.fn{color:#DCDCAA}.cm{color:#6A9955}.str{color:#CE9178}.ty{color:#4EC9B0}
+
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:13px;padding:14px 18px;background:var(--sf2);border:1px solid transparent;border-radius:var(--r);cursor:pointer;transition:all .2s;text-align:left;width:100%;font-family:'Sora',sans-serif;color:var(--tx);font-size:14px;line-height:1.5}
+.opt:hover:not(:disabled){border-color:rgba(84,197,248,0.3);background:rgba(84,197,248,0.05);transform:translateX(4px)}
+.opt:disabled{cursor:default}
+.ol{flex-shrink:0;width:26px;height:26px;border-radius:6px;background:rgba(84,197,248,0.1);border:1px solid rgba(84,197,248,0.2);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--fs);margin-top:1px}
+.opt.correct{border-color:var(--gn);background:var(--gnb)}.opt.correct .ol{background:var(--gn);border-color:var(--gn);color:#000}
+.opt.wrong{border-color:var(--rd);background:var(--rdb);opacity:.7}.opt.wrong .ol{background:var(--rd);border-color:var(--rd);color:#fff}
+.opt.dimmed{opacity:.32}
+.expl{display:none;margin-top:18px;padding:14px 18px;background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-radius:var(--r);font-size:13px;line-height:1.65;color:#ccc}
+.expl.show{display:block;animation:fu .3s ease both}
+.expl strong{color:var(--yw);font-weight:600;display:block;margin-bottom:3px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.nbtn{display:none;margin-top:18px;width:100%;padding:15px;background:linear-gradient(135deg,var(--fb),#1870E0);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.nbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(5,83,177,0.4)}
+.nbtn.show{display:block;animation:fu .3s ease both}
+
+#results{display:none;text-align:center;animation:fu .6s ease both}
+.sring{width:160px;height:160px;margin:0 auto 28px;position:relative}
+.sring svg{transform:rotate(-90deg)}.sring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.rbg{stroke:var(--sf2)}.rfill{stroke:url(#sg);transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)}
+.slabel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.snum{font-size:42px;font-weight:800;line-height:1;background:linear-gradient(135deg,#fff,var(--fs));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sdenom{font-size:14px;color:var(--mt);font-family:'JetBrains Mono',monospace}
+.rtitle{font-size:24px;font-weight:800;margin-bottom:8px}.rmsg{color:var(--mt);font-size:14px;line-height:1.6;margin-bottom:32px}
+.rbtn{display:inline-flex;align-items:center;gap:10px;padding:13px 28px;background:transparent;border:1px solid rgba(84,197,248,0.3);border-radius:var(--r);color:var(--fs);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.rbtn:hover{background:rgba(84,197,248,0.08);transform:translateY(-2px)}
+.sgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:28px 0}
+.stile{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.stile.ok{background:var(--gnb);border:1px solid var(--gn);color:var(--gn)}.stile.ko{background:var(--rdb);border:1px solid var(--rd);color:var(--rd)}
+
+@keyframes fd{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .35s ease}
+@media(max-width:520px){.card{padding:22px 18px}.qtxt{font-size:15px}}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="wrap">
+
+<header>
+  <div class="badge"><span class="dot"></span>IAM1 · Flutter — Persistance</div>
+  <h1>Persistance<br>des Données</h1>
+  <p class="sub">Quiz · 6 questions · shared_preferences · Fichiers (path_provider) · SQLite (sqflite)</p>
+</header>
+
+<div class="pgwrap">
+  <div class="pgmeta"><span>PROGRESSION</span><span id="pglbl">0 / 6</span></div>
+  <div class="pgtrk"><div class="pgfill" id="pgfill"></div></div>
+</div>
+
+<div id="qc"></div>
+
+<div id="results">
+  <div class="sring">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#0553B1"/><stop offset="100%" stop-color="#54C5F8"/>
+      </linearGradient></defs>
+      <circle class="rbg" cx="80" cy="80" r="68"/>
+      <circle class="rfill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="rfill"/>
+    </svg>
+    <div class="slabel"><span class="snum" id="snum">0</span><span class="sdenom">/ 6</span></div>
+  </div>
+  <h2 class="rtitle" id="rtitle"></h2>
+  <p class="rmsg" id="rmsg"></p>
+  <div class="sgrid" id="sgrid"></div>
+  <button class="rbtn" onclick="restart()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+    Recommencer
+  </button>
+</div>
+</div>
+
+<script>
+// ── Persistence chooser ─────────────────────────────────────────
+var scenarios = [
+  { text: "Stocker le thème (clair/sombre) choisi par l'utilisateur", answer: "shared_preferences", cls: "sa-sp" },
+  { text: "Sauvegarder l'historique complet des commandes d'une app e-commerce (10 000+ entrées)", answer: "sqflite", cls: "sa-sql" },
+  { text: "Mettre en cache le contenu d'un article téléchargé pour lecture hors-ligne", answer: "Fichiers (dart:io)", cls: "sa-file" },
+  { text: "Mémoriser si l'utilisateur a déjà vu le tutoriel d'introduction", answer: "shared_preferences", cls: "sa-sp" },
+  { text: "Stocker le carnet de contacts avec recherche par nom et numéro", answer: "sqflite", cls: "sa-sql" },
+  { text: "Exporter un rapport PDF généré par l'application", answer: "Fichiers (dart:io)", cls: "sa-file" },
+];
+
+function buildChooser(slot) {
+  var d = document.createElement('div');
+  d.className = 'chooser';
+  d.innerHTML = '<div class="chooser-label">🗂 Choisisseur de solution — cliquez pour révéler la meilleure solution</div>' +
+    '<div class="scenarios" id="scenarios-list"></div>' +
+    '<div class="chooser-hint">Cliquez sur un scénario pour voir la solution recommandée</div>';
+  slot.appendChild(d);
+  var list = document.getElementById('scenarios-list');
+  scenarios.forEach(function(s, i) {
+    var div = document.createElement('div');
+    div.className = 'scenario';
+    div.innerHTML = '<span class="scenario-text">' + s.text + '</span>' +
+      '<span class="scenario-answer ' + s.cls + '">' + s.answer + '</span>';
+    div.onclick = function() {
+      div.classList.toggle('selected');
+      div.classList.toggle('reveal');
+    };
+    list.appendChild(div);
+  });
+}
+
+// ── SQL injection demo ──────────────────────────────────────────
+function buildSQLDemo(slot) {
+  var d = document.createElement('div');
+  d.className = 'sql-demo';
+  d.innerHTML =
+    '<div class="sql-label">🔒 Démo injection SQL — entrez un ID et testez les deux approches</div>' +
+    '<div class="sql-input-row">' +
+      '<input class="sql-input" id="sql-id" value="42" placeholder="Entrez un ID..."/>' +
+    '</div>' +
+    '<div class="sql-btns">' +
+      '<button class="sql-btn safe" onclick="sqlSafe()">✅ whereArgs (sécurisé)</button>' +
+      '<button class="sql-btn unsafe" onclick="sqlUnsafe()">❌ Interpolation (dangereux)</button>' +
+    '</div>' +
+    '<div class="sql-result idle" id="sql-result">Entrez un ID et cliquez un bouton...</div>';
+  slot.appendChild(d);
+}
+
+function sqlSafe() {
+  var id = document.getElementById('sql-id').value;
+  var res = document.getElementById('sql-result');
+  if (!res) return;
+  res.className = 'sql-result ok';
+  res.innerHTML = '✅ <b>Sécurisé</b> : db.delete("dogs", where: "id = ?", whereArgs: [' + id + '])<br>' +
+    'SQL généré : DELETE FROM dogs WHERE id = ? — paramètre passé séparément.<br>' +
+    (id.includes("'") || id.includes("OR") ? '⚠ Tentative d\'injection détectée et neutralisée !' : 'Requête sûre exécutée.');
+}
+
+function sqlUnsafe() {
+  var id = document.getElementById('sql-id').value;
+  var res = document.getElementById('sql-result');
+  if (!res) return;
+  var isAttack = id.toLowerCase().includes('or') || id.includes("'") || id.includes(';');
+  res.className = 'sql-result ' + (isAttack ? 'danger' : 'idle');
+  if (isAttack) {
+    res.innerHTML = '🚨 <b>INJECTION SQL !</b><br>SQL généré : DELETE FROM dogs WHERE id = ' + id + '<br>' +
+      'Un attaquant peut supprimer TOUTES les données ou modifier la base entière !';
+  } else {
+    res.innerHTML = '⚠ <b>Dangereux</b> : db.delete("dogs", where: "id = ' + id + '")<br>' +
+      'Fonctionne pour ' + id + ' mais reste vulnérable. Essayez : <code>1 OR 1=1</code>';
+  }
+}
+
+// ── Quiz data ────────────────────────────────────────────────────
+var Qs = [
+  {
+    q: "Quelles sont les limitations de shared_preferences par rapport à SQLite ?",
+    chooser: true,
+    options: [
+      "shared_preferences est plus lent que SQLite pour toutes les opérations.",
+      "shared_preferences ne supporte que les types primitifs (int, double, bool, String, List<String>), n'est pas conçu pour de grandes quantités de données, et sans garantie de persistance absolue.",
+      "shared_preferences nécessite une connexion internet pour fonctionner.",
+      "shared_preferences ne peut stocker qu'une seule valeur à la fois.",
+    ],
+    correct: 1,
+    expl: "shared_preferences est limité aux types primitifs, pas conçu pour de grands volumes, et sans garantie absolue de persistance entre redémarrages. SQLite supporte les structures complexes, les relations et les requêtes avancées, et garantit la durabilité (ACID).",
+  },
+  {
+    q: "Quelle méthode de path_provider retourne le dossier persistant privé de l'app (effacé seulement à la désinstallation) ?",
+    code: [
+      "<span class='cm'>// Laquelle choisir pour stocker des données persistantes ?</span>",
+      "<span class='kw'>final</span> dir1 = <span class='kw'>await</span> <span class='fn'>getTemporaryDirectory</span>();",
+      "<span class='kw'>final</span> dir2 = <span class='kw'>await</span> <span class='fn'>getApplicationDocumentsDirectory</span>();",
+      "<span class='kw'>final</span> dir3 = <span class='kw'>await</span> <span class='fn'>getDownloadsDirectory</span>();",
+    ],
+    options: [
+      "getTemporaryDirectory() — persistant jusqu'à la désinstallation.",
+      "getDownloadsDirectory() — le dossier de téléchargements de l'appareil.",
+      "getApplicationDocumentsDirectory() — dossier privé de l'app, effacé uniquement à la désinstallation.",
+      "getApplicationSupportDirectory() — accessible par l'utilisateur.",
+    ],
+    correct: 2,
+    expl: "getApplicationDocumentsDirectory() retourne le dossier privé : iOS NSDocumentDirectory, Android AppData. Persiste jusqu'à désinstallation. getTemporaryDirectory() peut être nettoyé par l'OS à tout moment — à utiliser pour les caches temporaires.",
+  },
+  {
+    q: "Pourquoi faut-il utiliser whereArgs au lieu d'interpoler directement dans where ?",
+    sqldemo: true,
+    code: [
+      "<span class='cm'>// ❌ DANGEREUX — interpolation directe</span>",
+      "<span class='kw'>await</span> db.<span class='fn'>delete</span>(<span class='str'>'dogs'</span>,",
+      "  where: <span class='str'>'id = <b style=\"color:#FF5C7A\">${dog.id}</b>'</span>,  <span class='cm'>// injection SQL possible !</span>",
+      ");",
+      "",
+      "<span class='cm'>// ✅ SÉCURISÉ — whereArgs</span>",
+      "<span class='kw'>await</span> db.<span class='fn'>delete</span>(<span class='str'>'dogs'</span>,",
+      "  where: <span class='str'>'id = ?'</span>,",
+      "  whereArgs: [dog.id],  <span class='cm'>// echappé automatiquement</span>",
+      ");",
+    ],
+    options: [
+      "whereArgs est plus rapide que l'interpolation de chaîne.",
+      "whereArgs est obligatoire par l'API sqflite — l'interpolation n'est pas supportée.",
+      "Pour prévenir les injections SQL : l'interpolation directe permet à une valeur malveillante de modifier la requête.",
+      "whereArgs permet d'utiliser des valeurs null, contrairement à l'interpolation.",
+    ],
+    correct: 2,
+    expl: "L'injection SQL permet à un attaquant de modifier une requête en incluant du SQL dans une valeur (ex: '1 OR 1=1' supprime tout). whereArgs passe les valeurs comme paramètres séparés — sqflite les échappe. Règle absolue : where: 'id = ?', whereArgs: [id]. Jamais where: 'id = ${id}'.",
+  },
+  {
+    q: "Que fait le paramètre onCreate dans openDatabase() ?",
+    code: [
+      "<span class='kw'>final</span> database = <span class='fn'>openDatabase</span>(",
+      "  <span class='fn'>join</span>(<span class='kw'>await</span> <span class='fn'>getDatabasesPath</span>(), <span class='str'>'app.db'</span>),",
+      "  onCreate: (db, version) {  <span class='cm'>// ← quand s'exécute-t-il ?</span>",
+      "    <span class='kw'>return</span> db.<span class='fn'>execute</span>(",
+      "      <span class='str'>'CREATE TABLE dogs(id INTEGER PRIMARY KEY, name TEXT)'</span>,",
+      "    );",
+      "  },",
+      "  version: <span class='cm'>1</span>,",
+      ");",
+    ],
+    options: [
+      "Il s'exécute à chaque ouverture de la base de données.",
+      "Il crée les tables uniquement lors de la première ouverture (création) de la base de données.",
+      "Il migre automatiquement les données lors d'une mise à jour de l'application.",
+      "Il réinitialise la base de données à chaque lancement de l'application.",
+    ],
+    correct: 1,
+    expl: "onCreate s'exécute uniquement quand la base n'existe pas encore — c'est-à-dire la première installation. Pour les mises à jour de schéma (ajout de colonne), incrementez version à 2 et définissez onUpgrade. Sans cela, les utilisateurs existants garderaient l'ancien schéma.",
+  },
+  {
+    q: "Dans getAllDogs(), pourquoi convertit-on List<Map<String,Object?>> en List<Dog> ?",
+    code: [
+      "<span class='ty'>Future</span>&lt;<span class='ty'>List</span>&lt;<span class='ty'>Dog</span>&gt;&gt; <span class='fn'>getAllDogs</span>() <span class='kw'>async</span> {",
+      "  <span class='kw'>final</span> db = <span class='kw'>await</span> database;",
+      "  <span class='kw'>final</span> maps = <span class='kw'>await</span> db.<span class='fn'>query</span>(<span class='str'>'dogs'</span>);",
+      "  <span class='cm'>// maps = [{id:0, name:'Fido', age:35}, ...]</span>",
+      "  <span class='kw'>return</span> [",
+      "    <span class='kw'>for</span> (<span class='kw'>final</span> {<span class='str'>'id'</span>: id <span class='kw'>as</span> <span class='ty'>int</span>, ...} <span class='kw'>in</span> maps)",
+      "      <span class='ty'>Dog</span>(id: id, ...),  <span class='cm'>// conversion Map → Dog</span>",
+      "  ];",
+      "}",
+    ],
+    options: [
+      "Parce que sqflite ne sait pas retourner directement une List<Dog>.",
+      "Pour des raisons de performance : List<Dog> est plus rapide à parcourir.",
+      "Pour travailler avec des objets Dart fortement typés plutôt que des Maps génériques — plus sûr, lisible et maintenable.",
+      "Parce que Dog hérite de Map et doit être converti.",
+    ],
+    correct: 2,
+    expl: "db.query() retourne toujours List<Map<String,Object?>>. Convertir en List<Dog> permet de travailler avec des objets typés : dog.name est plus sûr que map['name'] as String. C'est le pattern DAO. La conversion centralise aussi la logique de désérialisation.",
+  },
+  {
+    q: "Quelle solution choisir pour stocker des milliers de messages de chat avec recherche par date et expéditeur ?",
+    options: [
+      "shared_preferences — pratique et rapide pour de petits volumes.",
+      "Fichiers dart:io — un fichier JSON par conversation.",
+      "SQLite avec sqflite — supporte de grands volumes, WHERE, ORDER BY, INDEX et les relations.",
+      "Variables Dart en mémoire — le plus rapide pour la lecture.",
+    ],
+    correct: 2,
+    expl: "SQLite est la solution appropriée pour des milliers d'enregistrements avec recherche/tri. shared_preferences est limité aux primitifs. Les fichiers JSON sont inefficaces (lecture intégrale à chaque requête). Les variables mémoire ne persistent pas entre lancements.",
+  },
+];
+
+var LETTERS = ['A','B','C','D'];
+var cur = 0, score = 0, results = [];
+
+function render() {
+  var c = document.getElementById('qc');
+  if (cur >= Qs.length) { showResults(); return; }
+  var q = Qs[cur]; c.innerHTML = '';
+  var card = document.createElement('div'); card.className = 'card';
+  var codeHtml = q.code ? '<div class="qcode">' + q.code.join('<br>') + '</div>' : '';
+  card.innerHTML =
+    '<div class="qnum">Question ' + (cur+1) + ' sur ' + Qs.length + '</div>' +
+    '<p class="qtxt">' + q.q + '</p>' +
+    (q.chooser ? '<div id="chooser-slot"></div>' : '') +
+    codeHtml +
+    (q.sqldemo ? '<div id="sqldemo-slot"></div>' : '') +
+    '<div class="opts" id="opts"></div>' +
+    '<div class="expl" id="expl"><strong>💡 Explication</strong>' + q.expl + '</div>';
+  c.appendChild(card);
+  if (q.chooser) buildChooser(document.getElementById('chooser-slot'));
+  if (q.sqldemo) buildSQLDemo(document.getElementById('sqldemo-slot'));
+  var optsEl = card.querySelector('#opts');
+  q.options.forEach(function(opt, i) {
+    var btn = document.createElement('button'); btn.className = 'opt';
+    btn.innerHTML = '<span class="ol">' + LETTERS[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = function() { handleAnswer(i); };
+    optsEl.appendChild(btn);
+  });
+  var nb = document.createElement('button'); nb.className = 'nbtn'; nb.id = 'nbtn';
+  nb.textContent = cur === Qs.length-1 ? 'Voir les résultats →' : 'Question suivante →';
+  nb.onclick = function() { cur++; render(); updatePg(); };
+  c.appendChild(nb); updatePg();
+}
+
+function handleAnswer(chosen) {
+  var q = Qs[cur]; var opts = document.querySelectorAll('.opt');
+  opts.forEach(function(b) { b.disabled = true; });
+  var ok = chosen === q.correct; if (ok) score++;
+  results[cur] = ok;
+  opts.forEach(function(b, i) {
+    if (i === q.correct) b.classList.add('correct');
+    else if (i === chosen && !ok) { b.classList.add('wrong'); b.classList.add('shake'); }
+    else b.classList.add('dimmed');
+  });
+  document.getElementById('expl').classList.add('show');
+  document.getElementById('nbtn').classList.add('show');
+}
+
+function updatePg() {
+  document.getElementById('pgfill').style.width = (cur/Qs.length*100) + '%';
+  document.getElementById('pglbl').textContent = cur + ' / ' + Qs.length;
+}
+
+function showResults() {
+  document.getElementById('qc').innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('snum').textContent = score;
+  setTimeout(function() {
+    document.getElementById('rfill').style.strokeDashoffset = 427.26 - (score/Qs.length)*427.26;
+  }, 100);
+  var pct = score/Qs.length;
+  var t, m;
+  if(pct===1){t='Score parfait ! 🎉';m='Maîtrise complète des 3 solutions de persistance Flutter. shared_preferences, fichiers et SQLite n\'ont plus de secrets !';}
+  else if(pct>=.8){t='Très bien ! 🚀';m='Excellente compréhension de la persistance Flutter. Revoyez les points manqués.';}
+  else if(pct>=.6){t='Bien ! 📚';m='Bonne base. Relisez les sections sur whereArgs (sécurité SQL) et les répertoires path_provider.';}
+  else{t='À retravailler 💪';m='Refaites les exercices des 3 parties du TP, puis retentez le quiz.';}
+  document.getElementById('rtitle').textContent = t;
+  document.getElementById('rmsg').textContent = m;
+  var g = document.getElementById('sgrid'); g.innerHTML = '';
+  results.forEach(function(ok, i) {
+    var tile = document.createElement('div');
+    tile.className = 'stile ' + (ok?'ok':'ko');
+    tile.title = 'Q'+(i+1)+' : '+(ok?'Correct':'Incorrect');
+    tile.textContent = 'Q'+(i+1);
+    g.appendChild(tile);
+  });
+  document.getElementById('pgfill').style.width = '100%';
+  document.getElementById('pglbl').textContent = '6 / 6';
+}
+
+function restart() {
+  cur=0;score=0;results=[];
+  document.getElementById('results').style.display='none';
+  document.getElementById('rfill').style.strokeDashoffset='427.26';
+  render();updatePg();
+}
+render();
+</script>
+</body>
+</html>
