@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — Firebase & Firestore · ChatBoard Flutter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --fire:#FF6F00;--fires:#FFB300;--bg:#0D0700;--sf:#1A0E00;--sf2:#2A1800;
+  --bd:rgba(255,111,0,0.2);--tx:#FFF3E0;--mt:#A0785A;
+  --gn:#00E5A0;--gnb:rgba(0,229,160,0.08);
+  --rd:#FF5C7A;--rdb:rgba(255,92,122,0.08);
+  --yw:#FFD166;--r:12px;
+}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(255,111,0,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,111,0,0.04) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:rgba(255,111,0,0.2);top:-150px;right:-100px}
+.orb2{width:400px;height:400px;background:rgba(255,179,0,0.1);bottom:80px;left:-80px}
+.wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:40px 24px 80px}
+
+header{text-align:center;margin-bottom:52px;animation:fd .7s ease both}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,111,0,0.15);border:1px solid rgba(255,111,0,0.35);border-radius:999px;padding:6px 16px;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--fires);text-transform:uppercase;margin-bottom:20px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--fires);animation:pulse 2s infinite}
+h1{font-size:clamp(26px,5vw,40px);font-weight:800;line-height:1.15;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 30%,var(--fires));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.sub{color:var(--mt);font-size:14px;font-weight:300;line-height:1.6}
+
+.pgwrap{margin-bottom:44px}
+.pgmeta{display:flex;justify-content:space-between;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--mt);margin-bottom:8px}
+.pgmeta span:last-child{color:var(--fires)}
+.pgtrk{height:3px;background:var(--sf2);border-radius:999px;overflow:hidden}
+.pgfill{height:100%;background:linear-gradient(90deg,var(--fire),var(--fires));border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+
+/* ── AuthGate flow diagram ─────────────────────────────────────── */
+.authgate-demo{background:var(--sf2);border:1px solid var(--bd);border-radius:16px;padding:20px;margin:-4px 0 20px}
+.ag-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:16px}
+.ag-flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center;margin-bottom:16px}
+.ag-box{padding:10px 16px;border-radius:8px;font-size:12px;font-family:'JetBrains Mono',monospace;text-align:center;min-width:130px;transition:all .3s}
+.ag-arrow{color:var(--mt);font-size:20px;padding:0 8px;flex-shrink:0}
+.ag-stream{background:rgba(255,111,0,0.15);border:1px solid rgba(255,111,0,0.4);color:var(--fires)}
+.ag-null{background:rgba(255,92,122,0.1);border:1px solid rgba(255,92,122,0.3);color:var(--rd)}
+.ag-user{background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);color:var(--gn)}
+.ag-auth{background:rgba(255,92,122,0.08);border:1px solid rgba(255,92,122,0.2);color:var(--rd)}
+.ag-chat{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);color:var(--gn)}
+.ag-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+.ag-btn{padding:7px 14px;border-radius:8px;border:none;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.ag-btn.login{background:rgba(0,229,160,0.15);color:var(--gn);border:1px solid rgba(0,229,160,0.3)}
+.ag-btn.logout{background:rgba(255,92,122,0.15);color:var(--rd);border:1px solid rgba(255,92,122,0.3)}
+.ag-state{text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mt);transition:color .3s}
+.ag-state.connected{color:var(--gn)}
+.ag-state.disconnected{color:var(--rd)}
+
+/* ── Firestore doc viewer ─────────────────────────────────────── */
+.firestore-demo{background:var(--sf2);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:-4px 0 20px}
+.fs-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mt);text-transform:uppercase;margin-bottom:14px}
+.fs-collection{border:1px solid rgba(255,111,0,0.25);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.fs-col-header{background:rgba(255,111,0,0.15);padding:8px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fires);font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.fs-docs{padding:8px}
+.fs-doc{background:var(--sf);border:1px solid rgba(255,111,0,0.1);border-radius:8px;margin-bottom:6px;overflow:hidden}
+.fs-doc-header{padding:6px 12px;background:rgba(255,111,0,0.08);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fires);display:flex;justify-content:space-between;cursor:pointer}
+.fs-doc-fields{padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;display:none}
+.fs-doc-fields.open{display:block}
+.fs-field-key{color:var(--fires)}
+.fs-field-val{color:var(--gn)}
+.fs-field-type{color:var(--mt);font-size:10px}
+.fs-add-btn{padding:6px 14px;background:rgba(255,111,0,0.15);border:1px solid rgba(255,111,0,0.3);border-radius:6px;color:var(--fires);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s}
+.fs-add-btn:hover{background:rgba(255,111,0,0.25)}
+.fs-stream-indicator{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--mt);font-family:'JetBrains Mono',monospace;margin-top:8px}
+.fs-pulse{width:8px;height:8px;border-radius:50%;background:var(--gn);animation:pulse 1.5s infinite}
+
+/* Card */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:34px;margin-bottom:16px;animation:fu .5s ease both;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--fire),var(--fires),transparent)}
+.qnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--fires);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.qnum::after{content:'';flex:1;height:1px;background:var(--bd)}
+.qtxt{font-size:17px;font-weight:600;line-height:1.55;margin-bottom:24px}
+.qcode{background:#1A0A00;border:1px solid rgba(255,111,0,0.15);border-radius:8px;padding:12px 16px;margin:-4px 0 18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#FFD0A0;line-height:1.7;overflow-x:auto}
+.kw{color:#FF8C00}.fn{color:#FFD166}.cm{color:#7A5A3A}.str{color:#FF6B6B}.ty{color:#FFB300}
+
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:13px;padding:14px 18px;background:var(--sf2);border:1px solid transparent;border-radius:var(--r);cursor:pointer;transition:all .2s;text-align:left;width:100%;font-family:'Sora',sans-serif;color:var(--tx);font-size:14px;line-height:1.5}
+.opt:hover:not(:disabled){border-color:rgba(255,111,0,0.3);background:rgba(255,111,0,0.06);transform:translateX(4px)}
+.opt:disabled{cursor:default}
+.ol{flex-shrink:0;width:26px;height:26px;border-radius:6px;background:rgba(255,111,0,0.12);border:1px solid rgba(255,111,0,0.25);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--fires);margin-top:1px}
+.opt.correct{border-color:var(--gn);background:var(--gnb)}.opt.correct .ol{background:var(--gn);border-color:var(--gn);color:#000}
+.opt.wrong{border-color:var(--rd);background:var(--rdb);opacity:.7}.opt.wrong .ol{background:var(--rd);border-color:var(--rd);color:#fff}
+.opt.dimmed{opacity:.32}
+.expl{display:none;margin-top:18px;padding:14px 18px;background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-radius:var(--r);font-size:13px;line-height:1.65;color:#ccc}
+.expl.show{display:block;animation:fu .3s ease both}
+.expl strong{color:var(--yw);font-weight:600;display:block;margin-bottom:3px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.nbtn{display:none;margin-top:18px;width:100%;padding:15px;background:linear-gradient(135deg,var(--fire),#FF8F00);border:none;border-radius:var(--r);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.nbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(255,111,0,0.4)}
+.nbtn.show{display:block;animation:fu .3s ease both}
+
+#results{display:none;text-align:center;animation:fu .6s ease both}
+.sring{width:160px;height:160px;margin:0 auto 28px;position:relative}
+.sring svg{transform:rotate(-90deg)}.sring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.rbg{stroke:var(--sf2)}.rfill{stroke:url(#sg);transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)}
+.slabel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.snum{font-size:42px;font-weight:800;line-height:1;background:linear-gradient(135deg,#fff,var(--fires));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sdenom{font-size:14px;color:var(--mt);font-family:'JetBrains Mono',monospace}
+.rtitle{font-size:24px;font-weight:800;margin-bottom:8px}.rmsg{color:var(--mt);font-size:14px;line-height:1.6;margin-bottom:32px}
+.rbtn{display:inline-flex;align-items:center;gap:10px;padding:13px 28px;background:transparent;border:1px solid rgba(255,111,0,0.35);border-radius:var(--r);color:var(--fires);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.rbtn:hover{background:rgba(255,111,0,0.1);transform:translateY(-2px)}
+.sgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:28px 0}
+.stile{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.stile.ok{background:var(--gnb);border:1px solid var(--gn);color:var(--gn)}.stile.ko{background:var(--rdb);border:1px solid var(--rd);color:var(--rd)}
+
+@keyframes fd{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .35s ease}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="wrap">
+
+<header>
+  <div class="badge"><span class="dot"></span>IAM1 · Flutter — Firebase · ChatBoard</div>
+  <h1>Firebase &<br>Firestore</h1>
+  <p class="sub">Quiz · 6 questions · Firebase Auth · Cloud Firestore · StreamBuilder · AuthGate · Requêtes</p>
+</header>
+
+<div class="pgwrap">
+  <div class="pgmeta"><span>PROGRESSION</span><span id="pglbl">0 / 6</span></div>
+  <div class="pgtrk"><div class="pgfill" id="pgfill"></div></div>
+</div>
+
+<div id="qc"></div>
+
+<div id="results">
+  <div class="sring">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#FF6F00"/><stop offset="100%" stop-color="#FFB300"/>
+      </linearGradient></defs>
+      <circle class="rbg" cx="80" cy="80" r="68"/>
+      <circle class="rfill" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="427.26" id="rfill"/>
+    </svg>
+    <div class="slabel"><span class="snum" id="snum">0</span><span class="sdenom">/ 6</span></div>
+  </div>
+  <h2 class="rtitle" id="rtitle"></h2>
+  <p class="rmsg" id="rmsg"></p>
+  <div class="sgrid" id="sgrid"></div>
+  <button class="rbtn" onclick="restart()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.68"/></svg>
+    Recommencer
+  </button>
+</div>
+</div>
+
+<script>
+// ── AuthGate simulator ─────────────────────────────────────────
+var agConnected = false;
+
+function buildAuthGate(slot) {
+  var d = document.createElement('div');
+  d.className = 'authgate-demo';
+  d.innerHTML =
+    '<div class="ag-label">🔐 Simulateur AuthGate — authStateChanges() en action</div>' +
+    '<div class="ag-flow">' +
+      '<div class="ag-box ag-stream">FirebaseAuth<br>.authStateChanges()</div>' +
+      '<span class="ag-arrow">→</span>' +
+      '<div class="ag-box ag-stream">Stream&lt;User?&gt;</div>' +
+      '<span class="ag-arrow">→</span>' +
+      '<div class="ag-box ag-stream" id="ag-snap">StreamBuilder</div>' +
+      '<span class="ag-arrow">→</span>' +
+      '<div class="ag-box" id="ag-dest" style="transition:all .3s">?</div>' +
+    '</div>' +
+    '<div class="ag-btns">' +
+      '<button class="ag-btn login" onclick="agLogin()">✅ Simuler connexion</button>' +
+      '<button class="ag-btn logout" onclick="agLogout()">🚪 Simuler déconnexion</button>' +
+    '</div>' +
+    '<div class="ag-state" id="ag-state">Aucune action — stream en attente...</div>';
+  slot.appendChild(d);
+  updateAG();
+}
+
+function agLogin() {
+  agConnected = true;
+  updateAG();
+}
+function agLogout() {
+  agConnected = false;
+  updateAG();
+}
+
+function updateAG() {
+  var dest = document.getElementById('ag-dest');
+  var state = document.getElementById('ag-state');
+  if (!dest) return;
+  if (agConnected) {
+    dest.className = 'ag-box ag-chat';
+    dest.innerHTML = 'ChatScreen()';
+    if (state) { state.className = 'ag-state connected'; state.textContent = 'snapshot.data = User("Ali") → ChatScreen() affiché'; }
+  } else {
+    dest.className = 'ag-box ag-auth';
+    dest.innerHTML = 'AuthScreen()';
+    if (state) { state.className = 'ag-state disconnected'; state.textContent = 'snapshot.data = null → AuthScreen() affiché'; }
+  }
+}
+
+// ── Firestore live demo ─────────────────────────────────────────
+var fsDocs = [
+  { id: 'xK9pQ2rT', text: 'Bonjour tout le monde !', displayName: 'Ali', uid: 'uid_ali', createdAt: '2025-01-15 09:30' },
+  { id: 'mN3wL8vY', text: 'Super app !', displayName: 'Sara', uid: 'uid_sara', createdAt: '2025-01-15 09:32' },
+];
+var fsOpenDocs = {};
+
+function buildFirestore(slot) {
+  var d = document.createElement('div');
+  d.className = 'firestore-demo';
+  d.innerHTML =
+    '<div class="fs-label">🔥 Visualiseur Firestore — collection "messages" en direct</div>' +
+    '<div id="fs-col"></div>' +
+    '<div class="fs-stream-indicator"><div class="fs-pulse"></div><span id="fs-stream-txt">.snapshots() écoute les changements en temps réel</span></div>';
+  slot.appendChild(d);
+  renderFS();
+}
+
+function renderFS() {
+  var col = document.getElementById('fs-col');
+  if (!col) return;
+  col.innerHTML =
+    '<div class="fs-collection">' +
+      '<div class="fs-col-header"><span>📁 messages (' + fsDocs.length + ' docs)</span>' +
+        '<button class="fs-add-btn" onclick="fsAddDoc()">+ Nouveau message</button>' +
+      '</div>' +
+      '<div class="fs-docs" id="fs-docs-list"></div>' +
+    '</div>';
+  var list = document.getElementById('fs-docs-list');
+  fsDocs.forEach(function(doc) {
+    var div = document.createElement('div');
+    div.className = 'fs-doc';
+    var isOpen = !!fsOpenDocs[doc.id];
+    div.innerHTML =
+      '<div class="fs-doc-header" onclick="fsToggleDoc(\'' + doc.id + '\')">' +
+        '<span>📄 ' + doc.id + '</span><span>' + (isOpen ? '▾' : '▸') + '</span>' +
+      '</div>' +
+      '<div class="fs-doc-fields ' + (isOpen ? 'open' : '') + '">' +
+        '<div><span class="fs-field-key">text: </span><span class="fs-field-val">"' + doc.text + '"</span> <span class="fs-field-type">String</span></div>' +
+        '<div><span class="fs-field-key">displayName: </span><span class="fs-field-val">"' + doc.displayName + '"</span> <span class="fs-field-type">String</span></div>' +
+        '<div><span class="fs-field-key">uid: </span><span class="fs-field-val">"' + doc.uid + '"</span> <span class="fs-field-type">String</span></div>' +
+        '<div><span class="fs-field-key">createdAt: </span><span class="fs-field-val">' + doc.createdAt + '</span> <span class="fs-field-type">Timestamp</span></div>' +
+      '</div>';
+    list.appendChild(div);
+  });
+}
+
+function fsToggleDoc(id) {
+  fsOpenDocs[id] = !fsOpenDocs[id];
+  renderFS();
+}
+
+function fsAddDoc() {
+  var names = ['Wael', 'Fatima', 'Karim', 'Nour'];
+  var msgs = ['Hello Firebase!', 'Message en temps réel 🔥', 'Firestore c\'est génial!', 'StreamBuilder fonctionne!'];
+  var name = names[Math.floor(Math.random()*names.length)];
+  var id = Math.random().toString(36).substring(2,10);
+  fsDocs.unshift({ id: id, text: msgs[Math.floor(Math.random()*msgs.length)], displayName: name, uid: 'uid_'+name.toLowerCase(), createdAt: '2025-01-15 09:'+Math.floor(33+Math.random()*20) });
+  fsOpenDocs[id] = true;
+  var st = document.getElementById('fs-stream-txt');
+  if (st) { st.style.color = 'var(--gn)'; st.textContent = '⚡ .snapshots() → nouvel événement émis → StreamBuilder reconstruit l\'UI !'; setTimeout(function(){ st.style.color=''; st.textContent='.snapshots() écoute les changements en temps réel'; }, 2500); }
+  renderFS();
+}
+
+// ── Quiz data ─────────────────────────────────────────────────
+var Qs = [
+  {
+    q: "Quel est le rôle de authStateChanges() dans l'AuthGate de ChatBoard ?",
+    authgate: true,
+    options: [
+      "Il retourne le profil complet de l'utilisateur (email, displayName...).",
+      "Il retourne un Stream<User?> qui émet null si déconnecté et le User si connecté — permet de rediriger automatiquement entre AuthScreen et ChatScreen.",
+      "Il vérifie le mot de passe à chaque lancement de l'application.",
+      "Il synchronise les données Firestore avec l'état d'authentification.",
+    ],
+    correct: 1,
+    expl: "authStateChanges() est un stream persistant qui émet des événements à chaque changement d'état Auth. Dans l'AuthGate, StreamBuilder écoute ce stream et reconstruit l'UI : null → AuthScreen, User non-null → ChatScreen. La session est mémorisée entre les lancements sans code supplémentaire.",
+  },
+  {
+    q: "Pourquoi utilise-t-on FieldValue.serverTimestamp() plutôt que DateTime.now() pour l'horodatage des messages ?",
+    code: [
+      "<span class='cm'>// ❌ Risqué</span>",
+      "<span class='str'>'createdAt'</span>: <span class='ty'>DateTime</span>.now(), <span class='cm'>// horloge locale — peut être incorrecte</span>",
+      "",
+      "<span class='cm'>// ✅ Recommandé</span>",
+      "<span class='str'>'createdAt'</span>: <span class='ty'>FieldValue</span>.serverTimestamp(), <span class='cm'>// serveur Firebase</span>",
+    ],
+    options: [
+      "Pour des raisons de performance — serverTimestamp() est calculé plus rapidement.",
+      "Parce que DateTime.now() n'est pas supporté par Firestore.",
+      "Pour garantir un timestamp fiable synchronisé par le serveur Firebase, indépendamment de l'horloge locale de l'appareil qui peut être incorrecte.",
+      "Parce que serverTimestamp() est 10x plus précis que DateTime.now().",
+    ],
+    correct: 2,
+    expl: "DateTime.now() utilise l'horloge locale de l'appareil. Si elle est incorrecte ou manipulée, les messages s'affichent dans le mauvais ordre. FieldValue.serverTimestamp() délègue l'horodatage au serveur Firebase — fiable et synchronisé pour tous les utilisateurs.",
+  },
+  {
+    q: "Dans le StreamBuilder de ChatScreen, que se passe-t-il automatiquement quand un nouveau message est ajouté dans Firestore ?",
+    firestore: true,
+    options: [
+      "Il faut appeler setState() manuellement pour recharger la liste.",
+      "Firestore envoie une notification push qui déclenche un rechargement.",
+      "Le stream .snapshots() émet automatiquement un nouvel événement, StreamBuilder reconstruit l'UI avec la liste mise à jour — sans code supplémentaire.",
+      "Il faut appeler Navigator.pushReplacement() pour rafraîchir l'écran.",
+    ],
+    correct: 2,
+    expl: ".snapshots() retourne un stream temps réel : à chaque modification dans Firestore (ajout, modification, suppression), un nouveau QuerySnapshot est émis. StreamBuilder écoute et reconstruit automatiquement le ListView. C'est le cœur du temps réel Firestore — zéro code de rechargement manuel.",
+  },
+  {
+    q: "Pourquoi compare-t-on msg.uid == auth.currentUser?.uid pour afficher les boutons modifier/supprimer ?",
+    code: [
+      "<span class='kw'>final</span> isMe = msg.uid == auth.currentUser?.uid;",
+      "",
+      "<span class='cm'>// Trailing affiché conditionnellement :</span>",
+      "trailing: isMe ? <span class='ty'>Row</span>(children: [",
+      "  <span class='ty'>IconButton</span>(icon: <span class='ty'>Icon</span>(<span class='ty'>Icons</span>.edit), ...),",
+      "  <span class='ty'>IconButton</span>(icon: <span class='ty'>Icon</span>(<span class='ty'>Icons</span>.delete), ...),",
+      "]) : <span class='kw'>null</span>,",
+    ],
+    options: [
+      "Pour des raisons de performance — éviter d'afficher des boutons inutiles.",
+      "Pour s'assurer que chaque utilisateur ne voit les boutons d'action que sur ses propres messages, respectant la règle : on ne modifie que ce qu'on a créé.",
+      "Parce que Firestore interdit les modifications de documents d'autres utilisateurs par défaut.",
+      "Pour économiser des appels API vers Firestore.",
+    ],
+    correct: 1,
+    expl: "isMe = msg.uid == currentUser.uid empêche d'afficher les boutons edit/delete sur les messages des autres. C'est une protection côté UI. Pour une sécurité complète, il faut aussi des Security Rules Firestore côté serveur : allow update, delete: if request.auth.uid == resource.data.uid.",
+  },
+  {
+    q: "Quelle est la différence entre .update({'text': val}) et .set({'text': val}) sur un document Firestore ?",
+    options: [
+      ".update() modifie uniquement les champs spécifiés, les autres restent intacts. .set() remplace le document entier — les champs non spécifiés sont supprimés.",
+      ".update() est plus rapide que .set() pour les grandes collections.",
+      ".set() crée un document s'il n'existe pas, .update() échoue si le document n'existe pas.",
+      "Les deux sont identiques — .set() est juste l'ancien nom de .update().",
+    ],
+    correct: 0,
+    expl: ".update({'text': val}) modifie UNIQUEMENT le champ 'text' — uid, displayName et createdAt restent intacts. .set({'text': val}) REMPLACE tout le document avec seulement le champ 'text' — les autres champs sont perdus. Pour modifier partiellement, toujours utiliser .update(). Pour créer ou remplacer entièrement : .set().",
+  },
+  {
+    q: "Pourquoi la combinaison .where('uid', isEqualTo: x) + .orderBy('createdAt') nécessite-t-elle un index composite dans Firestore ?",
+    code: [
+      "<span class='cm'>// Cette requête nécessite un index composite :</span>",
+      "_col",
+      "  .where(<span class='str'>'uid'</span>, isEqualTo: uid)     <span class='cm'>// filtre champ 1</span>",
+      "  .orderBy(<span class='str'>'createdAt'</span>, descending: <span class='kw'>true</span>) <span class='cm'>// tri champ 2</span>",
+      "  .snapshots()",
+      "",
+      "<span class='cm'>// Sans index → FirebaseException: requires an index</span>",
+      "<span class='cm'>// L'erreur contient un lien direct pour créer l'index ✅</span>",
+    ],
+    options: [
+      "Pour des raisons de sécurité — Firestore bloque les requêtes non indexées.",
+      "Parce que Firestore ne peut pas trier des résultats sans index préalable.",
+      "Firestore ne peut pas exécuter efficacement une requête qui filtre sur un champ ET trie sur un autre sans un index composite pré-construit sur ces deux champs.",
+      "Parce que .where() et .orderBy() ne peuvent pas être chaînés.",
+    ],
+    correct: 2,
+    expl: "Firestore nécessite des index composites quand on combine un filtre (where) sur un champ avec un tri (orderBy) sur un autre champ différent. Sans index, la requête échoue avec une erreur contenant un lien direct pour créer l'index dans la Firebase Console. L'index est créé en 1-2 minutes.",
+  },
+];
+
+var LETTERS = ['A','B','C','D'];
+var cur = 0, score = 0, results = [];
+
+function render() {
+  var c = document.getElementById('qc');
+  if (cur >= Qs.length) { showResults(); return; }
+  var q = Qs[cur]; c.innerHTML = '';
+  var card = document.createElement('div'); card.className = 'card';
+  var codeHtml = q.code ? '<div class="qcode">' + q.code.join('<br>') + '</div>' : '';
+  card.innerHTML =
+    '<div class="qnum">Question ' + (cur+1) + ' sur ' + Qs.length + '</div>' +
+    '<p class="qtxt">' + q.q + '</p>' +
+    (q.authgate ? '<div id="ag-slot"></div>' : '') +
+    codeHtml +
+    (q.firestore ? '<div id="fs-slot"></div>' : '') +
+    '<div class="opts" id="opts"></div>' +
+    '<div class="expl" id="expl"><strong>💡 Explication</strong>' + q.expl + '</div>';
+  c.appendChild(card);
+  if (q.authgate) buildAuthGate(document.getElementById('ag-slot'));
+  if (q.firestore) buildFirestore(document.getElementById('fs-slot'));
+  var optsEl = card.querySelector('#opts');
+  q.options.forEach(function(opt, i) {
+    var btn = document.createElement('button'); btn.className = 'opt';
+    btn.innerHTML = '<span class="ol">' + LETTERS[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = function() { handleAnswer(i); };
+    optsEl.appendChild(btn);
+  });
+  var nb = document.createElement('button'); nb.className = 'nbtn'; nb.id = 'nbtn';
+  nb.textContent = cur === Qs.length-1 ? 'Voir les résultats →' : 'Question suivante →';
+  nb.onclick = function() { cur++; render(); updatePg(); };
+  c.appendChild(nb); updatePg();
+}
+
+function handleAnswer(chosen) {
+  var q = Qs[cur]; var opts = document.querySelectorAll('.opt');
+  opts.forEach(function(b){b.disabled=true;});
+  var ok = chosen===q.correct; if(ok) score++;
+  results[cur]=ok;
+  opts.forEach(function(b,i){
+    if(i===q.correct)b.classList.add('correct');
+    else if(i===chosen&&!ok){b.classList.add('wrong');b.classList.add('shake');}
+    else b.classList.add('dimmed');
+  });
+  document.getElementById('expl').classList.add('show');
+  document.getElementById('nbtn').classList.add('show');
+}
+
+function updatePg() {
+  document.getElementById('pgfill').style.width=(cur/Qs.length*100)+'%';
+  document.getElementById('pglbl').textContent=cur+' / '+Qs.length;
+}
+
+function showResults() {
+  document.getElementById('qc').innerHTML='';
+  document.getElementById('results').style.display='block';
+  document.getElementById('snum').textContent=score;
+  setTimeout(function(){document.getElementById('rfill').style.strokeDashoffset=427.26-(score/Qs.length)*427.26;},100);
+  var pct=score/Qs.length;
+  var t,m;
+  if(pct===1){t='Score parfait ! 🔥';m='Maîtrise complète de Firebase Auth et Firestore. ChatBoard n\'a plus de secrets !';}
+  else if(pct>=.8){t='Très bien ! 🚀';m='Excellente compréhension de Firebase. Revoyez les points manqués.';}
+  else if(pct>=.6){t='Bien ! 📚';m='Bonne base. Relisez authStateChanges() et la différence update/set.';}
+  else{t='À retravailler 💪';m='Refaites le TP ChatBoard de A à Z, puis retentez le quiz.';}
+  document.getElementById('rtitle').textContent=t;
+  document.getElementById('rmsg').textContent=m;
+  var g=document.getElementById('sgrid');g.innerHTML='';
+  results.forEach(function(ok,i){
+    var tile=document.createElement('div');
+    tile.className='stile '+(ok?'ok':'ko');
+    tile.title='Q'+(i+1)+' : '+(ok?'Correct':'Incorrect');
+    tile.textContent='Q'+(i+1);
+    g.appendChild(tile);
+  });
+  document.getElementById('pgfill').style.width='100%';
+  document.getElementById('pglbl').textContent='6 / 6';
+}
+
+function restart(){
+  cur=0;score=0;results=[];agConnected=false;
+  fsDocs=[
+    {id:'xK9pQ2rT',text:'Bonjour tout le monde !',displayName:'Ali',uid:'uid_ali',createdAt:'2025-01-15 09:30'},
+    {id:'mN3wL8vY',text:'Super app !',displayName:'Sara',uid:'uid_sara',createdAt:'2025-01-15 09:32'},
+  ];
+  fsOpenDocs={};
+  document.getElementById('results').style.display='none';
+  document.getElementById('rfill').style.strokeDashoffset='427.26';
+  render();updatePg();
+}
+render();
+</script>
+</body>
+</html>
